@@ -1,0 +1,20 @@
+[
+  {
+    "id": "usr_hugo",
+    "username": "hugo",
+    "password": "1",
+    "name": "Hugo Lozano",
+    "email": "hugo@orolozano.com",
+    "role": "admin",
+    "createdAt": "2024-01-12T10:00:00.000Z"
+  },
+  {
+    "id": "usr_juan",
+    "username": "juan",
+    "password": "uwu",
+    "name": "Juan Pérez",
+    "email": "juan@correo.com",
+    "role": "customer",
+    "createdAt": "2024-03-04T16:20:00.000Z"
+  }
+]

@@ -1,0 +1,19 @@
+[
+  {
+    "userId": "usr_juan",
+    "items": [
+      {
+        "productId": "prd_solitario",
+        "name": "Solitario Aurora",
+        "price": 12890000,
+        "quantity": 1
+      }
+    ],
+    "total": 12890000,
+    "shippingName": "Juan Pérez",
+    "shippingCity": "Ciudad de México",
+    "id": "ord_whylarh06689",
+    "status": "pagado",
+    "createdAt": "2026-09-17T02:09:40.617Z"
+  }
+]
