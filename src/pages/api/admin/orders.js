@@ -6,5 +6,6 @@ export default async function handler(req, res) {
   const user = await currentUserFromRequest(req);
   if (!user || user.role !== "admin") return json(res, { error: "No autorizado" }, 403);
   const orders = await listOrders();
+  // Never delete — always return full history
   return json(res, { orders });
 }

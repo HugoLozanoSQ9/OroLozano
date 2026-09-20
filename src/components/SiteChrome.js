@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { BrandMark } from "@/components/BrandMark";
 import { CartDrawer, FloatingCartButton } from "@/components/CartDrawer";
+import { WhatsAppButton } from "@/components/WhatsAppButton";
 import { getGuestCart } from "@/lib/store/auth-client";
 import { api } from "@/lib/store/client";
 
@@ -116,6 +117,7 @@ export function PageShell({ children }) {
       <SiteHeader />
       <main className="flex-1">{children}</main>
       <SiteFooter />
+      <WhatsAppButton />
       <FloatingCartButton onOpen={() => setCartOpen(true)} count={count} />
       <CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} />
     </div>

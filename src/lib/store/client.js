@@ -80,6 +80,11 @@ export const api = {
   adminDeleteProduct: (id) =>
     request(`/api/admin/products/${id}`, { method: "DELETE" }),
   adminOrders: () => request("/api/admin/orders"),
+  adminUpdateOrder: (id, payload) =>
+    request(`/api/admin/orders/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    }),
 };
 
 export function formatMxn(cents) {

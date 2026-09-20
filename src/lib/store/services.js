@@ -92,7 +92,28 @@ export async function getProductByCertificateUuid(uuid) {
 }
 
 export async function createProduct(input) {
-  const certificateUuid = input.certificate?.uuid || newUuid();
+  const hasCertInput = input.certificate && (input.certificate.uuid || input.certificate.density || input.certificate.touchstone);
+  let certificate = null;
+  if (hasCertInput) {
+    const certificateUuid = input.certificate?.uuid || newUuid();
+    certificate = {
+      uuid: certificateUuid,
+      serial: input.certificate?.serial || `OL-${certificateUuid.slice(0, 8).toUpperCase()}`,
+      weightGrams: Number(input.weightGrams ?? input.certificate?.weightGrams ?? 0),
+      density: Number(input.certificate?.density ?? 0),
+      densityMethod: input.certificate?.densityMethod || "densímetro",
+      touchstone: input.certificate?.touchstone || "",
+      ultrasound: input.certificate?.ultrasound || "",
+      tests: input.certificate?.tests || {
+        touchstone: true,
+        densimeter: true,
+        ultrasound: true,
+      },
+      notes: input.certificate?.notes || "",
+      issuedAt: new Date().toISOString(),
+      issuedBy: "Oro Lozano Atelier",
+    };
+  }
   const product = {
     name: input.name,
     slug: input.slug,
@@ -111,23 +132,7 @@ export async function createProduct(input) {
     active: input.active !== false,
     stones: "none",
     stonesNote: "Sin piedras. Piezas con piedras solo sobre pedido.",
-    certificate: {
-      uuid: certificateUuid,
-      serial: input.certificate?.serial || `OL-${certificateUuid.slice(0, 8).toUpperCase()}`,
-      weightGrams: Number(input.weightGrams ?? input.certificate?.weightGrams ?? 0),
-      density: Number(input.certificate?.density ?? 0),
-      densityMethod: input.certificate?.densityMethod || "densímetro",
-      touchstone: input.certificate?.touchstone || "",
-      ultrasound: input.certificate?.ultrasound || "",
-      tests: input.certificate?.tests || {
-        touchstone: true,
-        densimeter: true,
-        ultrasound: true,
-      },
-      notes: input.certificate?.notes || "",
-      issuedAt: new Date().toISOString(),
-      issuedBy: "Oro Lozano Atelier",
-    },
+    certificate,
     id: uid("prd"),
     createdAt: new Date().toISOString(),
   };
@@ -140,9 +145,16 @@ export async function updateProduct(id, patch) {
   await updateJson("products.json", [], (all) =>
     all.map((p) => {
       if (p.id !== id) return p;
-      const next = { ...p, ...patch, id: p.id, stock: 1 };
+      const next = { ...p, ...patch, id: p.id, stock: patch.stock !== undefined ? patch.stock : p.stock };
       if (patch.certificate) {
-        next.certificate = { ...(p.certificate || {}), ...patch.certificate };
+        const prev = p.certificate || {};
+        const cert = { ...prev, ...patch.certificate };
+        if (!cert.uuid) cert.uuid = newUuid();
+        if (!cert.serial) cert.serial = `OL-${cert.uuid.slice(0, 8).toUpperCase()}`;
+        if (!cert.issuedAt) cert.issuedAt = new Date().toISOString();
+        if (!cert.issuedBy) cert.issuedBy = "Oro Lozano Atelier";
+        next.certificate = cert;
+        if (cert.weightGrams != null) next.weightGrams = Number(cert.weightGrams);
       }
       updated = next;
       return next;
@@ -188,11 +200,43 @@ export async function createOrder(order) {
   const full = {
     ...order,
     id: uid("ord"),
-    status: "pagado",
+    status: order.status || "recibido",
+    statusHistory: [
+      {
+        status: order.status || "recibido",
+        at: new Date().toISOString(),
+        note: "Pedido registrado",
+      },
+    ],
     createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
   };
   await updateJson("orders.json", [], (all) => [full, ...all]);
   return full;
+}
+
+
+export async function updateOrderStatus(orderId, status, note = "") {
+  let updated;
+  await updateJson("orders.json", [], (all) =>
+    all.map((o) => {
+      if (o.id !== orderId) return o;
+      const history = Array.isArray(o.statusHistory) ? [...o.statusHistory] : [];
+      history.push({
+        status,
+        at: new Date().toISOString(),
+        note: note || "",
+      });
+      updated = {
+        ...o,
+        status,
+        statusHistory: history,
+        updatedAt: new Date().toISOString(),
+      };
+      return updated;
+    }),
+  );
+  return updated;
 }
 
 export async function createSession(userId) {
