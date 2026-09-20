@@ -1,4 +1,5 @@
 import { findUserById, getSession } from "./services";
+import { verifyJwt } from "./jwt";
 
 export const SESSION_COOKIE = "ol_session";
 
@@ -21,7 +22,21 @@ export function getSessionId(req) {
   return cookies[SESSION_COOKIE] || null;
 }
 
+export function getBearerToken(req) {
+  const auth = req.headers.authorization || "";
+  if (auth.startsWith("Bearer ")) return auth.slice(7);
+  return null;
+}
+
 export async function currentUserFromRequest(req) {
+  const token = getBearerToken(req);
+  if (token) {
+    const payload = verifyJwt(token);
+    if (payload?.sub) {
+      const user = await findUserById(payload.sub);
+      if (user) return user;
+    }
+  }
   const id = getSessionId(req);
   if (!id) return null;
   const session = await getSession(id);

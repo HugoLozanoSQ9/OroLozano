@@ -22,12 +22,14 @@ export default async function handler(req, res) {
       description: body.description || "",
       details: body.details || "",
       metal: body.metal || "Oro amarillo",
-      karat: body.karat || "18k",
+      purity: body.purity || body.karat || "18k",
+      weightGrams: Number(body.weightGrams || 0),
       price: Number(body.price),
-      stock: Number(body.stock ?? 1),
       image: body.image || "/products/anillo-sello.svg",
+      images: body.images || [body.image || "/products/anillo-sello.svg"],
       featured: Boolean(body.featured),
       active: body.active !== false,
+      certificate: body.certificate || {},
     });
     return json(res, { product }, 201);
   }

@@ -1,51 +1,123 @@
 [
   {
     "id": "prd_solitario",
-    "name": "Solitario Aurora",
-    "slug": "solitario-aurora",
+    "name": "Anillo Aurora",
+    "slug": "anillo-aurora",
     "category": "anillos",
-    "description": "Anillo de compromiso en oro 18k con diamante talla brillante de 1.20 ct.",
-    "details": "Oro amarillo 18k. Diamante certificado. Engaste de cuatro garras.",
+    "description": "Anillo de oro 18k de diseño limpio, sin piedras. Pieza única de atelier.",
+    "details": "Oro amarillo 18k macizo. Acabado espejo. Sin engastes ni piedras.",
     "metal": "Oro amarillo",
+    "purity": "18k",
     "karat": "18k",
-    "price": 12890000,
-    "stock": 3,
+    "weightGrams": 4.82,
+    "price": 2890000,
+    "stock": 1,
     "image": "/products/anillo-solitario.svg",
+    "images": [
+      "/products/anillo-solitario.svg"
+    ],
     "featured": true,
     "active": true,
-    "createdAt": "2025-06-01T12:00:00.000Z"
+    "stones": "none",
+    "stonesNote": "Sin piedras. Piezas con piedras solo sobre pedido.",
+    "createdAt": "2025-06-01T12:00:00.000Z",
+    "certificate": {
+      "uuid": "1babddda-e67d-4391-b4a1-a711cf622d78",
+      "serial": "OL-1BABDDDA",
+      "weightGrams": 4.82,
+      "density": 15.5,
+      "densityMethod": "densímetro",
+      "touchstone": "Prueba de toque positiva — pureza 18k",
+      "ultrasound": "Respuesta uniforme compatible con metal macizo (sin núcleo hueco detectable).",
+      "tests": {
+        "touchstone": true,
+        "densimeter": true,
+        "ultrasound": true
+      },
+      "notes": "Pieza única. Certificado de autenticidad Oro Lozano.",
+      "issuedAt": "2026-09-20T22:30:33.156859Z",
+      "issuedBy": "Oro Lozano Atelier"
+    }
   },
   {
     "id": "prd_tennis",
-    "name": "Collar Riviera",
-    "slug": "collar-riviera",
+    "name": "Cadena Riviera",
+    "slug": "cadena-riviera",
     "category": "collares",
-    "description": "Collar tennis de diamantes en oro 18k. Brillo continuo.",
-    "details": "40 cm. Diamantes talla brillante. Oro 18k.",
+    "description": "Cadena de oro 18k de eslabón continuo. Brillo natural del metal, sin piedras.",
+    "details": "40 cm. Oro 18k. Cierre de caja. Pieza única.",
     "metal": "Oro amarillo",
+    "purity": "18k",
     "karat": "18k",
-    "price": 18650000,
-    "stock": 2,
+    "weightGrams": 12.4,
+    "price": 5650000,
+    "stock": 1,
     "image": "/products/collar-tennis.svg",
+    "images": [
+      "/products/collar-tennis.svg"
+    ],
     "featured": true,
     "active": true,
-    "createdAt": "2025-06-02T12:00:00.000Z"
+    "stones": "none",
+    "createdAt": "2025-06-01T12:00:00.000Z",
+    "stonesNote": "Sin piedras. Piezas con piedras solo sobre pedido.",
+    "certificate": {
+      "uuid": "94ba4085-303f-4f79-ac0a-fde06cdbc621",
+      "serial": "OL-94BA4085",
+      "weightGrams": 12.4,
+      "density": 15.5,
+      "densityMethod": "densímetro",
+      "touchstone": "Prueba de toque positiva — pureza 18k",
+      "ultrasound": "Respuesta uniforme compatible con metal macizo (sin núcleo hueco detectable).",
+      "tests": {
+        "touchstone": true,
+        "densimeter": true,
+        "ultrasound": true
+      },
+      "notes": "Pieza única. Certificado de autenticidad Oro Lozano.",
+      "issuedAt": "2026-09-20T22:30:33.156859Z",
+      "issuedBy": "Oro Lozano Atelier"
+    }
   },
   {
     "id": "prd_gota",
     "name": "Aretes Lágrima",
     "slug": "aretes-lagrima",
     "category": "aretes",
-    "description": "Aretes colgantes en oro 18k con diamantes en cascada.",
-    "details": "Par. Oro 18k. Diamantes en pavé.",
+    "description": "Aretes colgantes en oro 18k. Silueta fluida, 100% metal.",
+    "details": "Par único. Oro 18k. Sin piedras.",
     "metal": "Oro amarillo",
+    "purity": "18k",
     "karat": "18k",
-    "price": 6240000,
-    "stock": 6,
+    "weightGrams": 3.15,
+    "price": 1980000,
+    "stock": 1,
     "image": "/products/aretes-gota.svg",
+    "images": [
+      "/products/aretes-gota.svg"
+    ],
     "featured": true,
     "active": true,
-    "createdAt": "2025-06-03T12:00:00.000Z"
+    "stones": "none",
+    "createdAt": "2025-06-01T12:00:00.000Z",
+    "stonesNote": "Sin piedras. Piezas con piedras solo sobre pedido.",
+    "certificate": {
+      "uuid": "8b57958e-40cb-4d45-b7d8-0b5b7e9863aa",
+      "serial": "OL-8B57958E",
+      "weightGrams": 3.15,
+      "density": 15.5,
+      "densityMethod": "densímetro",
+      "touchstone": "Prueba de toque positiva — pureza 18k",
+      "ultrasound": "Respuesta uniforme compatible con metal macizo (sin núcleo hueco detectable).",
+      "tests": {
+        "touchstone": true,
+        "densimeter": true,
+        "ultrasound": true
+      },
+      "notes": "Pieza única. Certificado de autenticidad Oro Lozano.",
+      "issuedAt": "2026-09-20T22:30:33.156859Z",
+      "issuedBy": "Oro Lozano Atelier"
+    }
   },
   {
     "id": "prd_cubana",
@@ -53,78 +125,198 @@
     "slug": "pulsera-cubana",
     "category": "pulseras",
     "description": "Eslabón cubano en oro 18k. Peso y presencia de taller.",
-    "details": "19 cm. Oro 18k macizo. Cierre de caja.",
+    "details": "19 cm. Oro 18k macizo. Cierre de caja. Pieza única.",
     "metal": "Oro amarillo",
+    "purity": "18k",
     "karat": "18k",
+    "weightGrams": 28.6,
     "price": 8920000,
-    "stock": 5,
+    "stock": 1,
     "image": "/products/pulsera-cubana.svg",
+    "images": [
+      "/products/pulsera-cubana.svg"
+    ],
     "featured": true,
     "active": true,
-    "createdAt": "2025-06-04T12:00:00.000Z"
+    "stones": "none",
+    "createdAt": "2025-06-01T12:00:00.000Z",
+    "stonesNote": "Sin piedras. Piezas con piedras solo sobre pedido.",
+    "certificate": {
+      "uuid": "164292c9-7a0e-4ea5-abc9-6158a5c1d977",
+      "serial": "OL-164292C9",
+      "weightGrams": 28.6,
+      "density": 15.5,
+      "densityMethod": "densímetro",
+      "touchstone": "Prueba de toque positiva — pureza 18k",
+      "ultrasound": "Respuesta uniforme compatible con metal macizo (sin núcleo hueco detectable).",
+      "tests": {
+        "touchstone": true,
+        "densimeter": true,
+        "ultrasound": true
+      },
+      "notes": "Pieza única. Certificado de autenticidad Oro Lozano.",
+      "issuedAt": "2026-09-20T22:30:33.156859Z",
+      "issuedBy": "Oro Lozano Atelier"
+    }
   },
   {
     "id": "prd_sello",
     "name": "Sello Lozano",
     "slug": "sello-lozano",
     "category": "anillos",
-    "description": "Anillo sello con talla diamante. Firma de casa.",
-    "details": "Oro 18k. Superficie facetada. Tallas 6 a 12.",
+    "description": "Anillo sello en oro 18k con talla facetada. Firma de casa.",
+    "details": "Oro 18k. Superficie facetada. Sin piedras.",
     "metal": "Oro amarillo",
+    "purity": "18k",
     "karat": "18k",
+    "weightGrams": 7.2,
     "price": 3180000,
-    "stock": 8,
+    "stock": 1,
     "image": "/products/anillo-sello.svg",
+    "images": [
+      "/products/anillo-sello.svg"
+    ],
     "featured": false,
     "active": true,
-    "createdAt": "2025-06-05T12:00:00.000Z"
+    "stones": "none",
+    "createdAt": "2025-06-01T12:00:00.000Z",
+    "stonesNote": "Sin piedras. Piezas con piedras solo sobre pedido.",
+    "certificate": {
+      "uuid": "1b092bea-4c85-4901-ad04-4e479a023f61",
+      "serial": "OL-1B092BEA",
+      "weightGrams": 7.2,
+      "density": 15.5,
+      "densityMethod": "densímetro",
+      "touchstone": "Prueba de toque positiva — pureza 18k",
+      "ultrasound": "Respuesta uniforme compatible con metal macizo (sin núcleo hueco detectable).",
+      "tests": {
+        "touchstone": true,
+        "densimeter": true,
+        "ultrasound": true
+      },
+      "notes": "Pieza única. Certificado de autenticidad Oro Lozano.",
+      "issuedAt": "2026-09-20T22:30:33.156859Z",
+      "issuedBy": "Oro Lozano Atelier"
+    }
   },
   {
     "id": "prd_pendiente",
-    "name": "Pendiente Éter",
-    "slug": "pendiente-eter",
+    "name": "Cadena Éter",
+    "slug": "cadena-eter",
     "category": "collares",
-    "description": "Cadena fina con diamante solitario.",
-    "details": "45 cm. Oro 18k. Diamante 0.25 ct.",
+    "description": "Cadena fina de oro 18k para uso diario. Solo metal.",
+    "details": "45 cm. Oro 18k. Cadena veneciana. Pieza única.",
     "metal": "Oro amarillo",
+    "purity": "18k",
     "karat": "18k",
-    "price": 2450000,
-    "stock": 10,
+    "weightGrams": 2.85,
+    "price": 1450000,
+    "stock": 1,
     "image": "/products/collar-pendiente.svg",
+    "images": [
+      "/products/collar-pendiente.svg"
+    ],
     "featured": false,
     "active": true,
-    "createdAt": "2025-06-06T12:00:00.000Z"
+    "stones": "none",
+    "createdAt": "2025-06-01T12:00:00.000Z",
+    "stonesNote": "Sin piedras. Piezas con piedras solo sobre pedido.",
+    "certificate": {
+      "uuid": "77d26a2c-6de7-49ed-a5d2-a348d1945b84",
+      "serial": "OL-77D26A2C",
+      "weightGrams": 2.85,
+      "density": 15.5,
+      "densityMethod": "densímetro",
+      "touchstone": "Prueba de toque positiva — pureza 18k",
+      "ultrasound": "Respuesta uniforme compatible con metal macizo (sin núcleo hueco detectable).",
+      "tests": {
+        "touchstone": true,
+        "densimeter": true,
+        "ultrasound": true
+      },
+      "notes": "Pieza única. Certificado de autenticidad Oro Lozano.",
+      "issuedAt": "2026-09-20T22:30:33.156859Z",
+      "issuedBy": "Oro Lozano Atelier"
+    }
   },
   {
     "id": "prd_aro",
-    "name": "Aros Pavé",
-    "slug": "aros-pave",
+    "name": "Aros Clásicos",
+    "slug": "aros-clasicos",
     "category": "aretes",
-    "description": "Aros medianos con pavé de diamantes.",
-    "details": "Diámetro 18 mm. Oro 18k.",
+    "description": "Aros medianos en oro 18k. Perfil limpio, sin pavé ni piedras.",
+    "details": "Diámetro 18 mm. Oro 18k. Pieza única (par).",
     "metal": "Oro amarillo",
+    "purity": "18k",
     "karat": "18k",
-    "price": 4780000,
-    "stock": 7,
+    "weightGrams": 4.1,
+    "price": 2100000,
+    "stock": 1,
     "image": "/products/aretes-aro.svg",
+    "images": [
+      "/products/aretes-aro.svg"
+    ],
     "featured": false,
     "active": true,
-    "createdAt": "2025-06-07T12:00:00.000Z"
+    "stones": "none",
+    "createdAt": "2025-06-01T12:00:00.000Z",
+    "stonesNote": "Sin piedras. Piezas con piedras solo sobre pedido.",
+    "certificate": {
+      "uuid": "bc8abc84-041f-44e8-bfcf-da17031dddce",
+      "serial": "OL-BC8ABC84",
+      "weightGrams": 4.1,
+      "density": 15.5,
+      "densityMethod": "densímetro",
+      "touchstone": "Prueba de toque positiva — pureza 18k",
+      "ultrasound": "Respuesta uniforme compatible con metal macizo (sin núcleo hueco detectable).",
+      "tests": {
+        "touchstone": true,
+        "densimeter": true,
+        "ultrasound": true
+      },
+      "notes": "Pieza única. Certificado de autenticidad Oro Lozano.",
+      "issuedAt": "2026-09-20T22:30:33.156859Z",
+      "issuedBy": "Oro Lozano Atelier"
+    }
   },
   {
-    "id": "prd_brazalete",
-    "name": "Brazalete Línea",
-    "slug": "brazalete-linea",
+    "id": "prd_plata",
+    "name": "Brazalete Plata 925",
+    "slug": "brazalete-plata-925",
     "category": "pulseras",
-    "description": "Brazalete rígido con línea de diamantes.",
-    "details": "Oro 18k. Diamantes talla brillante.",
-    "metal": "Oro amarillo",
-    "karat": "18k",
-    "price": 11240000,
-    "stock": 3,
+    "description": "Brazalete rígido en plata 925. Acabado satinado, sin piedras.",
+    "details": "Plata de ley 925. Apertura de bisagra. Pieza única.",
+    "metal": "Plata",
+    "purity": "925",
+    "karat": "925",
+    "weightGrams": 18.3,
+    "price": 890000,
+    "stock": 1,
     "image": "/products/brazalete-diamantes.svg",
+    "images": [
+      "/products/brazalete-diamantes.svg"
+    ],
     "featured": true,
     "active": true,
-    "createdAt": "2025-06-08T12:00:00.000Z"
+    "stones": "none",
+    "createdAt": "2025-06-01T12:00:00.000Z",
+    "stonesNote": "Sin piedras. Piezas con piedras solo sobre pedido.",
+    "certificate": {
+      "uuid": "237f60df-4cb5-49bb-9cec-496f62445502",
+      "serial": "OL-237F60DF",
+      "weightGrams": 18.3,
+      "density": 10.4,
+      "densityMethod": "densímetro",
+      "touchstone": "Prueba de toque positiva — pureza 925",
+      "ultrasound": "Respuesta uniforme compatible con metal macizo (sin núcleo hueco detectable).",
+      "tests": {
+        "touchstone": true,
+        "densimeter": true,
+        "ultrasound": true
+      },
+      "notes": "Pieza única. Certificado de autenticidad Oro Lozano.",
+      "issuedAt": "2026-09-20T22:30:33.156859Z",
+      "issuedBy": "Oro Lozano Atelier"
+    }
   }
 ]

@@ -16,17 +16,14 @@ export default async function handler(req, res) {
       return json(res, { error: "El admin no compra desde esta cuenta" }, 403);
     }
     const productId = req.body?.productId;
-    const quantity = Math.max(1, req.body?.quantity ?? 1);
     if (!productId) return json(res, { error: "Producto requerido" }, 400);
     const product = await getProduct(productId);
-    if (!product) return json(res, { error: "Producto no existe" }, 404);
+    if (!product || product.stock < 1) return json(res, { error: "Pieza no disponible" }, 404);
     const cart = await getCart(user.id);
-    const existing = cart.items.find((i) => i.productId === productId);
-    const items = existing
-      ? cart.items.map((i) =>
-          i.productId === productId ? { ...i, quantity: i.quantity + quantity } : i,
-        )
-      : [...cart.items, { productId, quantity }];
+    const exists = cart.items.find((i) => i.productId === productId);
+    const items = exists
+      ? cart.items
+      : [...cart.items, { productId, quantity: 1 }];
     const next = await setCart(user.id, items);
     return json(res, { cart: next });
   }
@@ -40,7 +37,7 @@ export default async function handler(req, res) {
       quantity <= 0
         ? cart.items.filter((i) => i.productId !== productId)
         : cart.items.map((i) =>
-            i.productId === productId ? { ...i, quantity } : i,
+            i.productId === productId ? { ...i, quantity: 1 } : i,
           );
     const next = await setCart(user.id, items);
     return json(res, { cart: next });

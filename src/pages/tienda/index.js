@@ -34,7 +34,8 @@ export default function Tienda() {
       <PageShell>
         <section className="mx-auto max-w-6xl px-5 py-12 md:px-8">
           <p className="text-xs tracking-[0.28em] uppercase text-gold">Colección</p>
-          <h1 className="mt-2 text-4xl">El atelier</h1>
+          <h1 className="mt-2 text-4xl">Piezas únicas</h1>
+          <p className="mt-2 text-sm text-muted">Oro y plata sin piedras. Una sola existencia por diseño.</p>
           <div className="mt-8 flex flex-wrap gap-2">
             {cats.map((c) => (
               <button

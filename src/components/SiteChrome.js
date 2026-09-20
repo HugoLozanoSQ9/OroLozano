@@ -1,37 +1,15 @@
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
+import { useAuth } from "@/components/AuthProvider";
 import { BrandMark } from "@/components/BrandMark";
+import { CartDrawer, FloatingCartButton } from "@/components/CartDrawer";
+import { getGuestCart } from "@/lib/store/auth-client";
 import { api } from "@/lib/store/client";
 
-export function useAuth() {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  const refresh = async () => {
-    try {
-      const data = await api.me();
-      setUser(data.user);
-    } catch {
-      setUser(null);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    refresh();
-  }, []);
-
-  const logout = async () => {
-    await api.logout();
-    setUser(null);
-  };
-
-  return { user, loading, refresh, logout };
-}
-
-export function SiteHeader({ user, onLogout }) {
+export function SiteHeader() {
+  const { user, token, logout } = useAuth();
+  const isLoggedIn = Boolean(token && user);
   const [open, setOpen] = useState(false);
   const router = useRouter();
 
@@ -48,29 +26,29 @@ export function SiteHeader({ user, onLogout }) {
           <Link href="/tienda" className="hover:text-gold">
             Colección
           </Link>
+          <Link href="/guias" className="hover:text-gold">
+            Guías
+          </Link>
           <Link href="/cuenta" className="hover:text-gold">
-            {user ? "Mi cuenta" : "Entrar"}
+            {isLoggedIn ? "Mi cuenta" : "Entrar"}
           </Link>
           {user?.role === "admin" ? (
             <Link href="/admin" className="text-gold">
               Atelier
             </Link>
           ) : null}
-          {user ? (
+          {isLoggedIn ? (
             <button
               type="button"
               className="hover:text-gold"
               onClick={async () => {
-                await onLogout?.();
+                await logout();
                 router.push("/");
               }}
             >
               Salir
             </button>
           ) : null}
-          <Link href="/carrito" className="text-fg">
-            Carrito
-          </Link>
         </nav>
         <button type="button" className="md:hidden text-fg" onClick={() => setOpen((v) => !v)}>
           {open ? "Cerrar" : "Menú"}
@@ -78,20 +56,10 @@ export function SiteHeader({ user, onLogout }) {
       </div>
       {open ? (
         <div className="flex flex-col gap-4 border-t border-border px-5 py-5 text-xs tracking-[0.2em] uppercase text-muted md:hidden">
-          <Link href="/tienda" onClick={() => setOpen(false)}>
-            Colección
-          </Link>
-          <Link href="/cuenta" onClick={() => setOpen(false)}>
-            {user ? "Mi cuenta" : "Entrar"}
-          </Link>
-          {user?.role === "admin" ? (
-            <Link href="/admin" onClick={() => setOpen(false)}>
-              Atelier
-            </Link>
-          ) : null}
-          <Link href="/carrito" onClick={() => setOpen(false)}>
-            Carrito
-          </Link>
+          <Link href="/tienda" onClick={() => setOpen(false)}>Colección</Link>
+          <Link href="/guias" onClick={() => setOpen(false)}>Guías</Link>
+          <Link href="/cuenta" onClick={() => setOpen(false)}>{isLoggedIn ? "Mi cuenta" : "Entrar"}</Link>
+          {user?.role === "admin" ? <Link href="/admin" onClick={() => setOpen(false)}>Atelier</Link> : null}
         </div>
       ) : null}
     </header>
@@ -104,21 +72,55 @@ export function SiteFooter() {
       <div className="mx-auto flex max-w-6xl flex-col gap-6 px-5 py-10 md:flex-row md:items-center md:justify-between md:px-8">
         <div>
           <p className="font-display tracking-[0.22em] text-gold">ORO | LOZANO</p>
-          <p className="mt-2 text-sm text-muted">Joyería y oro premium.</p>
+          <p className="mt-2 text-sm text-muted">Oro y plata premium. Piezas únicas sin piedras.</p>
         </div>
-        <p className="text-xs tracking-[0.16em] uppercase text-subtle">Atelier · Ciudad de México</p>
+        <div className="flex flex-col gap-2 text-xs tracking-[0.16em] uppercase text-subtle">
+          <Link href="/guias" className="hover:text-gold">Guías de cuidado</Link>
+          <span>Atelier · Ciudad de México</span>
+        </div>
       </div>
     </footer>
   );
 }
 
 export function PageShell({ children }) {
-  const { user, logout } = useAuth();
+  const { user, token } = useAuth();
+  const [cartOpen, setCartOpen] = useState(false);
+  const [count, setCount] = useState(0);
+
+  useEffect(() => {
+    async function refreshCount() {
+      try {
+        if (token && user) {
+          const { cart } = await api.cart();
+          setCount((cart.items || []).reduce((s, i) => s + i.quantity, 0));
+        } else {
+          setCount(getGuestCart().reduce((s, i) => s + i.quantity, 0));
+        }
+      } catch {
+        setCount(getGuestCart().reduce((s, i) => s + i.quantity, 0));
+      }
+    }
+    refreshCount();
+    const onCart = () => refreshCount();
+    window.addEventListener("ol-cart-change", onCart);
+    window.addEventListener("ol-auth-change", onCart);
+    return () => {
+      window.removeEventListener("ol-cart-change", onCart);
+      window.removeEventListener("ol-auth-change", onCart);
+    };
+  }, [token, user]);
+
   return (
     <div className="flex min-h-screen flex-col bg-bg text-fg">
-      <SiteHeader user={user} onLogout={logout} />
+      <SiteHeader />
       <main className="flex-1">{children}</main>
       <SiteFooter />
+      <FloatingCartButton onOpen={() => setCartOpen(true)} count={count} />
+      <CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} />
     </div>
   );
 }
+
+// re-export for pages that imported useAuth from here
+export { useAuth } from "@/components/AuthProvider";

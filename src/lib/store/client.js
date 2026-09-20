@@ -1,10 +1,14 @@
-async function request(url, init) {
+import { clearSession, getStoredToken, setSession } from "./auth-client";
+
+async function request(url, init = {}) {
+  const token = typeof window !== "undefined" ? getStoredToken() : null;
   const res = await fetch(url, {
     ...init,
     credentials: "include",
     headers: {
       "Content-Type": "application/json",
-      ...(init?.headers ?? {}),
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(init.headers ?? {}),
     },
   });
   const body = await res.json().catch(() => ({}));
@@ -14,19 +18,37 @@ async function request(url, init) {
 
 export const api = {
   me: () => request("/api/auth/me"),
-  login: (username, password) =>
-    request("/api/auth/login", {
+  login: async (username, password) => {
+    const data = await request("/api/auth/login", {
       method: "POST",
       body: JSON.stringify({ username, password }),
-    }),
-  register: (data) =>
-    request("/api/auth/register", {
+    });
+    if (data.token && data.user) setSession(data.token, data.user);
+    return data;
+  },
+  register: async (payload) => {
+    const data = await request("/api/auth/register", {
       method: "POST",
-      body: JSON.stringify(data),
+      body: JSON.stringify(payload),
+    });
+    if (data.token && data.user) setSession(data.token, data.user);
+    return data;
+  },
+  logout: async () => {
+    try {
+      await request("/api/auth/logout", { method: "POST" });
+    } finally {
+      clearSession();
+    }
+  },
+  updateProfile: (payload) =>
+    request("/api/auth/profile", {
+      method: "PUT",
+      body: JSON.stringify(payload),
     }),
-  logout: () => request("/api/auth/logout", { method: "POST" }),
   products: () => request("/api/products"),
   product: (id) => request(`/api/products/${id}`),
+  certificate: (uuid) => request(`/api/certificates/${uuid}`),
   cart: () => request("/api/cart"),
   addToCart: (productId, quantity = 1) =>
     request("/api/cart", {
@@ -38,10 +60,10 @@ export const api = {
       method: "PUT",
       body: JSON.stringify({ productId, quantity }),
     }),
-  checkout: (shippingName, shippingCity) =>
+  checkout: (shipping) =>
     request("/api/orders", {
       method: "POST",
-      body: JSON.stringify({ shippingName, shippingCity }),
+      body: JSON.stringify(shipping),
     }),
   orders: () => request("/api/orders"),
   adminProducts: () => request("/api/admin/products"),

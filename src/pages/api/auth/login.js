@@ -1,5 +1,6 @@
 import { createSession, findUserByUsername, toPublic } from "@/lib/store/services";
 import { json, setSessionCookie } from "@/lib/store/http";
+import { signJwt } from "@/lib/store/jwt";
 
 export default async function handler(req, res) {
   if (req.method !== "POST") return json(res, { error: "Método no permitido" }, 405);
@@ -11,5 +12,12 @@ export default async function handler(req, res) {
   }
   const session = await createSession(user.id);
   setSessionCookie(res, session.id);
-  return json(res, { user: toPublic(user) });
+  const publicUser = toPublic(user);
+  const token = signJwt({
+    sub: user.id,
+    username: user.username,
+    role: user.role,
+    name: user.name,
+  });
+  return json(res, { user: publicUser, token });
 }
