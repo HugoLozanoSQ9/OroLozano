@@ -48,7 +48,7 @@ export default function Cuenta() {
   const [toast, setToast] = useState("");
   const [toastType, setToastType] = useState("success");
   const [currentPassword, setCurrentPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
+  const [changeNewPassword, setChangeNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
   useEffect(() => {
@@ -188,17 +188,17 @@ export default function Cuenta() {
                 onSubmit={async (e) => {
                   e.preventDefault();
                   setError("");
-                  if (newPassword !== confirmPassword) {
+                  if (changeNewPassword !== confirmPassword) {
                     setToastType("error");
                     setToast("Las contraseñas no coinciden");
                     return;
                   }
                   try {
-                    const res = await api.changePassword({ currentPassword, newPassword });
+                    const res = await api.changePassword({ currentPassword, newPassword: changeNewPassword });
                     setToastType("success");
                     setToast(res.message || "Contraseña actualizada");
                     setCurrentPassword("");
-                    setNewPassword("");
+                    setChangeNewPassword("");
                     setConfirmPassword("");
                   } catch (err) {
                     setToastType("error");
@@ -209,7 +209,7 @@ export default function Cuenta() {
                 <h2 className="font-display text-2xl">Cambiar contraseña</h2>
                 <p className="text-sm text-muted">Si ya iniciaste sesión no necesitas OTP de recuperación.</p>
                 <Field label="Contraseña actual" value={currentPassword} onChange={setCurrentPassword} type="password" />
-                <Field label="Nueva contraseña (mín. 6)" value={newPassword} onChange={setNewPassword} type="password" />
+                <Field label="Nueva contraseña (mín. 6)" value={changeNewPassword} onChange={setChangeNewPassword} type="password" />
                 <Field label="Confirmar nueva" value={confirmPassword} onChange={setConfirmPassword} type="password" />
                 <button type="submit" className="h-11 rounded-full bg-gold px-6 text-xs tracking-[0.18em] uppercase text-bg">
                   Actualizar contraseña
