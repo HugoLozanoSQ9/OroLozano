@@ -13,7 +13,15 @@
     "shippingName": "Juan Pérez",
     "shippingCity": "Ciudad de México",
     "id": "ord_whylarh06689",
-    "status": "pagado",
-    "createdAt": "2026-09-17T02:09:40.617Z"
+    "status": "en_envio",
+    "createdAt": "2026-09-17T02:09:40.617Z",
+    "statusHistory": [
+      {
+        "status": "en_envio",
+        "at": "2026-09-20T23:56:29.131Z",
+        "note": ""
+      }
+    ],
+    "updatedAt": "2026-09-20T23:56:29.131Z"
   }
 ]
