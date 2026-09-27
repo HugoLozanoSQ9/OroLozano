@@ -264,6 +264,7 @@ export async function createProduct(input) {
     stones: "none",
     stones_note: "Sin piedras. Piezas con piedras solo sobre pedido.",
     certificate,
+    price_breakdown: input.priceBreakdown || null,
     created_at: new Date().toISOString(),
   };
   const { data, error } = await sb().from("products").insert(row).select("*").single();
@@ -292,6 +293,7 @@ export async function updateProduct(id, patch) {
   if (patch.images !== undefined) update.images = patch.images;
   if (patch.featured !== undefined) update.featured = Boolean(patch.featured);
   if (patch.active !== undefined) update.active = Boolean(patch.active);
+  if (patch.priceBreakdown !== undefined) update.price_breakdown = patch.priceBreakdown;
   if (patch.certificate) {
     const prev = current.certificate || {};
     const cert = { ...prev, ...patch.certificate };
@@ -531,5 +533,67 @@ export async function resetPasswordWithOtp({ email, otp, newPassword }) {
 
   return { ok: true };
 }
+
+
+/* ---------- admin_data (settings / categories / spot) ---------- */
+
+const DEFAULT_ADMIN_DATA = {
+  id: "main",
+  categories: [
+    { id: "anillos", name: "Anillos", slug: "anillos" },
+    { id: "collares", name: "Collares", slug: "collares" },
+    { id: "aretes", name: "Aretes", slug: "aretes" },
+    { id: "pulseras", name: "Pulseras", slug: "pulseras" },
+  ],
+  gold_spot_by_karat: {},
+  margin_percent: 35,
+  iva_percent: 16,
+};
+
+export async function getAdminData() {
+  const { data, error } = await sb().from("admin_data").select("*").eq("id", "main").maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!data) {
+    const { data: created, error: insErr } = await sb()
+      .from("admin_data")
+      .upsert({ ...DEFAULT_ADMIN_DATA, updated_at: new Date().toISOString() }, { onConflict: "id" })
+      .select("*")
+      .single();
+    if (insErr) throw new Error(insErr.message);
+    return mapAdminData(created);
+  }
+  return mapAdminData(data);
+}
+
+function mapAdminData(row) {
+  return {
+    id: row.id,
+    categories: row.categories || DEFAULT_ADMIN_DATA.categories,
+    goldSpotByKarat: row.gold_spot_by_karat || {},
+    marginPercent: Number(row.margin_percent ?? 35),
+    ivaPercent: Number(row.iva_percent ?? 16),
+    updatedAt: row.updated_at,
+  };
+}
+
+export async function updateAdminData(patch) {
+  const current = await getAdminData();
+  const row = {
+    id: "main",
+    categories: patch.categories ?? current.categories,
+    gold_spot_by_karat: patch.goldSpotByKarat ?? current.goldSpotByKarat,
+    margin_percent: patch.marginPercent ?? current.marginPercent,
+    iva_percent: patch.ivaPercent ?? current.ivaPercent,
+    updated_at: new Date().toISOString(),
+  };
+  const { data, error } = await sb().from("admin_data").upsert(row, { onConflict: "id" }).select("*").single();
+  if (error) throw new Error(error.message);
+  return mapAdminData(data);
+}
+
+export async function softDeleteProduct(id) {
+  return updateProduct(id, { active: false, stock: 0 });
+}
+
 
 export { verifyPassword, publicImageUrl };

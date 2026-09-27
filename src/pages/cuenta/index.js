@@ -2,6 +2,16 @@ import Head from "next/head";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { PageShell, useAuth } from "@/components/SiteChrome";
+import { Toast } from "@/components/Toast";
+import {
+  MX_STATES,
+  onlyAlnumUser,
+  onlyDigits,
+  onlyLettersSpaces,
+  validateEmail,
+  validatePhoneMx,
+  validateZipMx,
+} from "@/lib/store/mx-validate";
 import { setSession } from "@/lib/store/auth-client";
 import { statusLabel } from "@/lib/store/order-status";
 import { api, formatMxn } from "@/lib/store/client";
@@ -20,14 +30,6 @@ const emptyShipping = {
   betweenStreets: "",
 };
 
-const MX_STATES = [
-  "Aguascalientes","Baja California","Baja California Sur","Campeche","Chiapas","Chihuahua",
-  "Ciudad de México","Coahuila","Colima","Durango","Estado de México","Guanajuato","Guerrero",
-  "Hidalgo","Jalisco","Michoacán","Morelos","Nayarit","Nuevo León","Oaxaca","Puebla","Querétaro",
-  "Quintana Roo","San Luis Potosí","Sinaloa","Sonora","Tabasco","Tamaulipas","Tlaxcala","Veracruz",
-  "Yucatán","Zacatecas",
-];
-
 export default function Cuenta() {
   const { user, token, loading, refresh, setAuth } = useAuth();
   const [mode, setMode] = useState("login"); // login | register | forgot | reset
@@ -43,6 +45,11 @@ export default function Cuenta() {
   const [otp, setOtp] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [recoverEmail, setRecoverEmail] = useState("");
+  const [toast, setToast] = useState("");
+  const [toastType, setToastType] = useState("success");
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
 
   useEffect(() => {
     if (!user) return;
@@ -59,6 +66,7 @@ export default function Cuenta() {
         <title>Cuenta — Oro Lozano</title>
       </Head>
       <PageShell>
+        <Toast message={toast} type={toastType} onClose={() => setToast("")} />
         {loading ? (
           <p className="py-20 text-center text-muted">Cargando…</p>
         ) : user && token ? (
@@ -90,19 +98,44 @@ export default function Cuenta() {
                   e.preventDefault();
                   setSaved("");
                   setError("");
+                  const e1 = validateEmail(profile.email);
+                  const e2 = validatePhoneMx(profile.phone);
+                  const e3 = shipping.zip ? validateZipMx(shipping.zip) : null;
+                  if (e1 || e2 || e3) {
+                    setError(e1 || e2 || e3);
+                    setToastType("error");
+                    setToast(e1 || e2 || e3);
+                    return;
+                  }
                   try {
                     const { user: updated } = await api.updateProfile({
-                      name: profile.name,
-                      email: profile.email,
-                      phone: profile.phone,
-                      shipping,
+                      name: onlyLettersSpaces(profile.name, 80),
+                      email: profile.email.trim().toLowerCase().slice(0, 80),
+                      phone: onlyDigits(profile.phone, 10),
+                      shipping: {
+                        ...shipping,
+                        fullName: onlyLettersSpaces(shipping.fullName, 80),
+                        phone: onlyDigits(shipping.phone, 10),
+                        zip: onlyDigits(shipping.zip, 5),
+                        street: String(shipping.street || "").slice(0, 80),
+                        extNumber: String(shipping.extNumber || "").slice(0, 10),
+                        intNumber: String(shipping.intNumber || "").slice(0, 10),
+                        neighborhood: String(shipping.neighborhood || "").slice(0, 60),
+                        city: onlyLettersSpaces(shipping.city, 60),
+                        references: String(shipping.references || "").slice(0, 120),
+                        betweenStreets: String(shipping.betweenStreets || "").slice(0, 80),
+                      },
                     });
                     setSession(token, updated);
                     setAuth(token, updated);
                     setSaved("Datos guardados");
+                    setToastType("success");
+                    setToast("Datos guardados correctamente");
                     await refresh();
                   } catch (err) {
                     setError(err.message);
+                    setToastType("error");
+                    setToast(err.message);
                   }
                 }}
               >
@@ -146,6 +179,40 @@ export default function Cuenta() {
                 {saved ? <p className="text-sm text-gold">{saved}</p> : null}
                 <button type="submit" className="h-12 rounded-full bg-gold px-8 text-xs tracking-[0.2em] uppercase text-bg">
                   Guardar cambios
+                </button>
+              </form>
+
+              
+              <form
+                className="mt-10 space-y-3 rounded-[var(--radius-xl)] border border-border bg-surface p-6"
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  setError("");
+                  if (newPassword !== confirmPassword) {
+                    setToastType("error");
+                    setToast("Las contraseñas no coinciden");
+                    return;
+                  }
+                  try {
+                    const res = await api.changePassword({ currentPassword, newPassword });
+                    setToastType("success");
+                    setToast(res.message || "Contraseña actualizada");
+                    setCurrentPassword("");
+                    setNewPassword("");
+                    setConfirmPassword("");
+                  } catch (err) {
+                    setToastType("error");
+                    setToast(err.message);
+                  }
+                }}
+              >
+                <h2 className="font-display text-2xl">Cambiar contraseña</h2>
+                <p className="text-sm text-muted">Si ya iniciaste sesión no necesitas OTP de recuperación.</p>
+                <Field label="Contraseña actual" value={currentPassword} onChange={setCurrentPassword} type="password" />
+                <Field label="Nueva contraseña (mín. 6)" value={newPassword} onChange={setNewPassword} type="password" />
+                <Field label="Confirmar nueva" value={confirmPassword} onChange={setConfirmPassword} type="password" />
+                <button type="submit" className="h-11 rounded-full bg-gold px-6 text-xs tracking-[0.18em] uppercase text-bg">
+                  Actualizar contraseña
                 </button>
               </form>
 
@@ -310,13 +377,15 @@ export default function Cuenta() {
   );
 }
 
-function Field({ label, value, onChange, type = "text" }) {
+function Field({ label, value, onChange, type = "text", maxLength, inputMode }) {
   return (
     <label className="block">
       <span className="mb-1 block text-xs tracking-[0.16em] uppercase text-subtle">{label}</span>
       <input
         type={type}
         value={value}
+        maxLength={maxLength}
+        inputMode={inputMode}
         onChange={(e) => onChange(e.target.value)}
         className="h-12 w-full rounded-[var(--radius-md)] border border-border bg-bg px-4"
       />

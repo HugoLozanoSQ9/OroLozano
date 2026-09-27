@@ -35,3 +35,11 @@ Eso corre `scripts/seed-supabase.mjs` y sube usuarios/productos a Supabase
 ## 4. Storage
 
 Bucket `products` (imágenes). Subida desde el Atelier con `<input type="file">`.
+
+## Migration v7 (después del schema base)
+
+Si ya corriste `schema.sql`, ejecuta también en el SQL Editor:
+
+`migration_v7.sql`
+
+Crea tabla `admin_data` (categorías, spot por kilataje, margen, IVA).

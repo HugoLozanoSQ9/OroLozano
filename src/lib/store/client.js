@@ -90,6 +90,18 @@ export const api = {
   adminDeleteProduct: (id) =>
     request(`/api/admin/products/${id}`, { method: "DELETE" }),
   adminOrders: () => request("/api/admin/orders"),
+  adminSettings: () => request("/api/admin/settings"),
+  adminUpdateSettings: (payload) =>
+    request("/api/admin/settings", {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    }),
+  changePassword: (payload) =>
+    request("/api/auth/change-password", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  publicSettings: () => request("/api/settings"),
   adminUploadImage: (payload) =>
     request("/api/admin/upload", {
       method: "POST",
@@ -106,6 +118,7 @@ export function formatMxn(cents) {
   return new Intl.NumberFormat("es-MX", {
     style: "currency",
     currency: "MXN",
-    maximumFractionDigits: 0,
-  }).format(cents / 100);
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format((Number(cents) || 0) / 100);
 }
