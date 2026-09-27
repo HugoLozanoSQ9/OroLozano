@@ -1,13 +1,13 @@
-# Base de datos local (JSON)
+# data/
 
-| Archivo | Contenido |
-| --- | --- |
-| users.json | Cuentas (admin y clientes) |
-| products.json | Catálogo de joyas |
-| carts.json | Carritos por usuario |
-| orders.json | Pedidos |
-| sessions.json | Sesiones activas |
+Esta carpeta **ya no** es la base de datos.
 
-Cuentas semilla:
-- admin: hugo / 1
-- cliente: juan / uwu
+La fuente de verdad es **Supabase** (Postgres + Storage).
+
+El seed de datos de prueba vive en:
+
+```bash
+npm run seed:supabase
+```
+
+(`scripts/seed-supabase.mjs` — inserta usuarios y productos con contraseñas hasheadas.)

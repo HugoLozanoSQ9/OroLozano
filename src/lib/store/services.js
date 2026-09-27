@@ -1,5 +1,7 @@
 import crypto from "node:crypto";
 import { getAdminClient, publicImageUrl } from "./supabase";
+import { hashPassword, verifyPassword, generateOtp } from "./password";
+import { sendPasswordOtpEmail } from "./mail";
 
 function uid(prefix = "id") {
   return `${prefix}_${Math.random().toString(36).slice(2, 10)}${Date.now().toString(36).slice(-4)}`;
@@ -116,10 +118,11 @@ export async function findUserById(id) {
 export async function createUser(input) {
   const existing = await findUserByUsername(input.username);
   if (existing) throw new Error("El usuario ya existe");
+  const hashed = await hashPassword(input.password);
   const user = {
     id: uid("usr"),
     username: input.username.trim().toLowerCase(),
-    password: input.password,
+    password: hashed,
     name: (input.name || "").trim(),
     email: (input.email || "").trim().toLowerCase(),
     phone: "",
@@ -169,7 +172,10 @@ export async function updateUser(id, patch) {
       ? { ...(current.shipping || {}), ...patch.shipping }
       : current.shipping || {},
   };
-  if (patch.password) next.password = patch.password;
+  let passwordUpdate = {};
+  if (patch.password) {
+    passwordUpdate.password = await hashPassword(patch.password);
+  }
   const { data, error } = await sb()
     .from("users")
     .update({
@@ -177,7 +183,7 @@ export async function updateUser(id, patch) {
       email: next.email,
       phone: next.phone,
       shipping: next.shipping,
-      ...(patch.password ? { password: patch.password } : {}),
+      ...passwordUpdate,
     })
     .eq("id", id)
     .select("*")
@@ -439,4 +445,91 @@ export async function uploadProductImage(filename, buffer, contentType = "image/
   return data.publicUrl;
 }
 
-export { publicImageUrl };
+
+export async function findUserByEmail(email) {
+  const { data, error } = await sb()
+    .from("users")
+    .select("*")
+    .ilike("email", String(email).trim())
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return mapUser(data);
+}
+
+export async function requestPasswordReset(email) {
+  const user = await findUserByEmail(email);
+  // Respuesta genérica siempre (no revelar si el correo existe)
+  if (!user) {
+    return { ok: true };
+  }
+  const otp = generateOtp(6);
+  const otpHash = await hashPassword(otp);
+  const expires = new Date(Date.now() + 15 * 60 * 1000).toISOString();
+  // Invalidar OTPs previos no usados
+  await sb()
+    .from("password_resets")
+    .update({ used_at: new Date().toISOString() })
+    .eq("email", user.email)
+    .is("used_at", null);
+
+  const { error } = await sb().from("password_resets").insert({
+    id: uid("rst"),
+    user_id: user.id,
+    email: user.email,
+    otp_hash: otpHash,
+    expires_at: expires,
+    created_at: new Date().toISOString(),
+  });
+  if (error) throw new Error(error.message);
+
+  await sendPasswordOtpEmail({ to: user.email, name: user.name, otp });
+  return { ok: true };
+}
+
+export async function resetPasswordWithOtp({ email, otp, newPassword }) {
+  if (!email || !otp || !newPassword) {
+    throw new Error("Correo, OTP y nueva contraseña son requeridos");
+  }
+  if (String(newPassword).length < 4) {
+    throw new Error("La contraseña debe tener al menos 4 caracteres");
+  }
+  const normalized = String(email).trim().toLowerCase();
+  const { data: rows, error } = await sb()
+    .from("password_resets")
+    .select("*")
+    .eq("email", normalized)
+    .is("used_at", null)
+    .order("created_at", { ascending: false })
+    .limit(5);
+  if (error) throw new Error(error.message);
+  if (!rows || rows.length === 0) {
+    throw new Error("Código inválido o expirado");
+  }
+  const now = Date.now();
+  let matched = null;
+  for (const row of rows) {
+    if (new Date(row.expires_at).getTime() < now) continue;
+    const ok = await verifyPassword(otp, row.otp_hash);
+    if (ok) {
+      matched = row;
+      break;
+    }
+  }
+  if (!matched) throw new Error("Código inválido o expirado");
+
+  const hashed = await hashPassword(newPassword);
+  const { error: upErr } = await sb()
+    .from("users")
+    .update({ password: hashed })
+    .eq("id", matched.user_id);
+  if (upErr) throw new Error(upErr.message);
+
+  await sb()
+    .from("password_resets")
+    .update({ used_at: new Date().toISOString() })
+    .eq("id", matched.id);
+
+  return { ok: true };
+}
+
+export { verifyPassword, publicImageUrl };

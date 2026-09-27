@@ -34,6 +34,16 @@ export const api = {
     if (data.token && data.user) setSession(data.token, data.user);
     return data;
   },
+  forgotPassword: (email) =>
+    request("/api/auth/forgot-password", {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    }),
+  resetPassword: (payload) =>
+    request("/api/auth/reset-password", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
   logout: async () => {
     try {
       await request("/api/auth/logout", { method: "POST" });

@@ -127,3 +127,20 @@ create policy "Service role manage product images"
   to service_role
   using (bucket_id = 'products')
   with check (bucket_id = 'products');
+
+-- PASSWORD RESET OTPs
+create table if not exists public.password_resets (
+  id text primary key,
+  user_id text not null references public.users(id) on delete cascade,
+  email text not null,
+  otp_hash text not null,
+  expires_at timestamptz not null,
+  used_at timestamptz,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists password_resets_email_idx on public.password_resets (email);
+create index if not exists password_resets_expires_at_idx on public.password_resets (expires_at);
+
+alter table public.password_resets enable row level security;
+grant all on public.password_resets to service_role;

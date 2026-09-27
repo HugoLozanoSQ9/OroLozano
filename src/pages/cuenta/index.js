@@ -30,7 +30,7 @@ const MX_STATES = [
 
 export default function Cuenta() {
   const { user, token, loading, refresh, setAuth } = useAuth();
-  const [mode, setMode] = useState("login");
+  const [mode, setMode] = useState("login"); // login | register | forgot | reset
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
@@ -40,6 +40,9 @@ export default function Cuenta() {
   const [profile, setProfile] = useState({ name: "", email: "", phone: "" });
   const [shipping, setShipping] = useState(emptyShipping);
   const [saved, setSaved] = useState("");
+  const [otp, setOtp] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [recoverEmail, setRecoverEmail] = useState("");
 
   useEffect(() => {
     if (!user) return;
@@ -177,47 +180,129 @@ export default function Cuenta() {
           )
         ) : (
           <section className="mx-auto max-w-md px-5 py-16">
-            <h1 className="text-center text-4xl">{mode === "login" ? "Entrar" : "Crear cuenta"}</h1>
-            <p className="mt-3 text-center text-sm text-muted">Cliente: juan / uwu · Admin: hugo / 1</p>
-            <form
-              className="mt-8 space-y-3"
-              onSubmit={async (e) => {
-                e.preventDefault();
-                setError("");
-                try {
-                  if (mode === "login") {
-                    const data = await api.login(username, password);
-                    setAuth(data.token, data.user);
-                  } else {
-                    const data = await api.register({ username, password, name, email });
-                    setAuth(data.token, data.user);
+            <h1 className="text-center text-4xl">
+              {mode === "login" && "Entrar"}
+              {mode === "register" && "Crear cuenta"}
+              {mode === "forgot" && "Recuperar acceso"}
+              {mode === "reset" && "Nueva contraseña"}
+            </h1>
+            <p className="mt-3 text-center text-sm text-muted">
+              {mode === "login" || mode === "register"
+                ? "Cliente: juan / uwu · Admin: hugo / 1"
+                : "Te enviaremos un código OTP al correo registrado"}
+            </p>
+
+            {(mode === "login" || mode === "register") && (
+              <form
+                className="mt-8 space-y-3"
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  setError("");
+                  try {
+                    if (mode === "login") {
+                      const data = await api.login(username, password);
+                      setAuth(data.token, data.user);
+                    } else {
+                      const data = await api.register({ username, password, name, email });
+                      setAuth(data.token, data.user);
+                    }
+                    await refresh();
+                  } catch (err) {
+                    setError(err.message);
                   }
-                  await refresh();
-                } catch (err) {
-                  setError(err.message);
-                }
-              }}
-            >
-              {mode === "register" ? (
+                }}
+              >
+                {mode === "register" ? (
+                  <>
+                    <Field label="Nombre" value={name} onChange={setName} />
+                    <Field label="Correo" value={email} onChange={setEmail} />
+                  </>
+                ) : null}
+                <Field label="Usuario" value={username} onChange={setUsername} />
+                <Field label="Contraseña" value={password} onChange={setPassword} type="password" />
+                {error ? <p className="text-sm text-danger">{error}</p> : null}
+                <button type="submit" className="h-12 w-full rounded-full bg-gold text-xs tracking-[0.2em] uppercase text-bg">
+                  {mode === "login" ? "Entrar" : "Registrarme"}
+                </button>
+              </form>
+            )}
+
+            {mode === "forgot" && (
+              <form
+                className="mt-8 space-y-3"
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  setError("");
+                  setSaved("");
+                  try {
+                    const res = await api.forgotPassword(recoverEmail);
+                    setSaved(res.message || "Revisa tu correo");
+                    setMode("reset");
+                  } catch (err) {
+                    setError(err.message);
+                  }
+                }}
+              >
+                <Field label="Correo registrado" value={recoverEmail} onChange={setRecoverEmail} />
+                {error ? <p className="text-sm text-danger">{error}</p> : null}
+                {saved ? <p className="text-sm text-gold">{saved}</p> : null}
+                <button type="submit" className="h-12 w-full rounded-full bg-gold text-xs tracking-[0.2em] uppercase text-bg">
+                  Enviar código OTP
+                </button>
+              </form>
+            )}
+
+            {mode === "reset" && (
+              <form
+                className="mt-8 space-y-3"
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  setError("");
+                  setSaved("");
+                  try {
+                    const res = await api.resetPassword({
+                      email: recoverEmail,
+                      otp,
+                      newPassword,
+                    });
+                    setSaved(res.message || "Contraseña actualizada");
+                    setMode("login");
+                    setPassword("");
+                    setOtp("");
+                    setNewPassword("");
+                  } catch (err) {
+                    setError(err.message);
+                  }
+                }}
+              >
+                <Field label="Correo" value={recoverEmail} onChange={setRecoverEmail} />
+                <Field label="Código OTP (6 dígitos)" value={otp} onChange={setOtp} />
+                <Field label="Nueva contraseña" value={newPassword} onChange={setNewPassword} type="password" />
+                {error ? <p className="text-sm text-danger">{error}</p> : null}
+                {saved ? <p className="text-sm text-gold">{saved}</p> : null}
+                <button type="submit" className="h-12 w-full rounded-full bg-gold text-xs tracking-[0.2em] uppercase text-bg">
+                  Guardar nueva contraseña
+                </button>
+              </form>
+            )}
+
+            <div className="mt-6 space-y-2 text-center text-sm text-muted">
+              {(mode === "login" || mode === "register") && (
                 <>
-                  <Field label="Nombre" value={name} onChange={setName} />
-                  <Field label="Correo" value={email} onChange={setEmail} />
+                  <button type="button" className="block w-full hover:text-gold" onClick={() => setMode(mode === "login" ? "register" : "login")}>
+                    {mode === "login" ? "¿Nuevo? Crea tu cuenta de cliente" : "Ya tengo cuenta"}
+                  </button>
+                  <button type="button" className="block w-full hover:text-gold" onClick={() => { setMode("forgot"); setError(""); setSaved(""); }}>
+                    ¿Olvidaste tu contraseña?
+                  </button>
                 </>
-              ) : null}
-              <Field label="Usuario" value={username} onChange={setUsername} />
-              <Field label="Contraseña" value={password} onChange={setPassword} type="password" />
-              {error ? <p className="text-sm text-danger">{error}</p> : null}
-              <button type="submit" className="h-12 w-full rounded-full bg-gold text-xs tracking-[0.2em] uppercase text-bg">
-                {mode === "login" ? "Entrar" : "Registrarme"}
-              </button>
-            </form>
-            <button
-              type="button"
-              className="mt-6 w-full text-sm text-muted hover:text-gold"
-              onClick={() => setMode(mode === "login" ? "register" : "login")}
-            >
-              {mode === "login" ? "¿Nuevo? Crea tu cuenta de cliente" : "Ya tengo cuenta"}
-            </button>
+              )}
+              {(mode === "forgot" || mode === "reset") && (
+                <button type="button" className="block w-full hover:text-gold" onClick={() => setMode("login")}>
+                  Volver a entrar
+                </button>
+              )}
+            </div>
           </section>
         )}
       </PageShell>
