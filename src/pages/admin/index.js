@@ -186,6 +186,35 @@ export default function Admin() {
                   <input className="h-11 w-full rounded-md border border-border bg-bg px-3" placeholder="Peso gramos" value={form.weightGrams} onChange={(e) => setForm({ ...form, weightGrams: e.target.value })} />
                   <input className="h-11 w-full rounded-md border border-border bg-bg px-3" placeholder="Precio centavos MXN" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} />
                   <input className="h-11 w-full rounded-md border border-border bg-bg px-3" placeholder="URL imagen" value={form.image} onChange={(e) => setForm({ ...form, image: e.target.value })} />
+                  <label className="block text-xs text-muted">
+                    o subir a Supabase Storage
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="mt-1 block w-full text-xs"
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        setMsg("Subiendo imagen…");
+                        try {
+                          const buf = await file.arrayBuffer();
+                          const bytes = new Uint8Array(buf);
+                          let binary = "";
+                          bytes.forEach((b) => { binary += String.fromCharCode(b); });
+                          const dataBase64 = btoa(binary);
+                          const { url } = await api.adminUploadImage({
+                            filename: file.name,
+                            contentType: file.type || "image/jpeg",
+                            dataBase64,
+                          });
+                          setForm((f) => ({ ...f, image: url }));
+                          setMsg("Imagen subida a Storage");
+                        } catch (err) {
+                          setMsg(err.message || "Error al subir imagen");
+                        }
+                      }}
+                    />
+                  </label>
                   <button type="submit" className="h-11 w-full rounded-full bg-gold text-xs tracking-[0.18em] uppercase text-bg">
                     Guardar pieza
                   </button>

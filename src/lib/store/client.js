@@ -80,6 +80,11 @@ export const api = {
   adminDeleteProduct: (id) =>
     request(`/api/admin/products/${id}`, { method: "DELETE" }),
   adminOrders: () => request("/api/admin/orders"),
+  adminUploadImage: (payload) =>
+    request("/api/admin/upload", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
   adminUpdateOrder: (id, payload) =>
     request(`/api/admin/orders/${id}`, {
       method: "PATCH",
