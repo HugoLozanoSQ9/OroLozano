@@ -5,7 +5,7 @@ import {
   getProduct,
   listOrders,
   setCart,
-  updateProduct,
+  markProductSold,
 } from "@/lib/store/services";
 
 export default async function handler(req, res) {
@@ -28,7 +28,7 @@ export default async function handler(req, res) {
     for (const item of cart.items) {
       const product = await getProduct(item.productId);
       if (!product) continue;
-      if (product.stock < 1) {
+      if (product.stock < 1 || product.sold) {
         return json(res, { error: `Pieza no disponible: ${product.name}` }, 400);
       }
       lines.push({
@@ -42,7 +42,7 @@ export default async function handler(req, res) {
       total += product.price;
     }
     for (const line of lines) {
-      await updateProduct(line.productId, { stock: 0, active: false });
+      await markProductSold(line.productId);
     }
     const body = req.body || {};
     const order = await createOrder({

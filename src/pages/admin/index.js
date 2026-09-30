@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { CertificateBadge } from "@/components/CertificateBadge";
 import { PageShell, useAuth } from "@/components/SiteChrome";
 import { Toast } from "@/components/Toast";
+import { Loader, ButtonSpinner } from "@/components/Loader";
 import { ORDER_STATUSES, statusLabel } from "@/lib/store/order-status";
 import { calculateSalePrice, formatMxnFromCentavos, KARAT_OPTIONS } from "@/lib/store/mx-validate";
 import { api, formatMxn } from "@/lib/store/client";
@@ -81,6 +82,10 @@ export default function Admin() {
   }
 
   function openEdit(p) {
+    if (p.sold) {
+      showToast("Pieza vendida: solo lectura", "error");
+      return;
+    }
     setForm({
       id: p.id,
       name: p.name || "",
@@ -206,6 +211,7 @@ export default function Admin() {
               {[
                 { id: "piezas", label: "Piezas" },
                 { id: "pedidos", label: "Despachar pedidos" },
+                { id: "settings", label: "Settings" },
               ].map((t) => (
                 <button
                   key={t.id}
@@ -218,12 +224,6 @@ export default function Admin() {
                   {t.label}
                 </button>
               ))}
-              <Link
-                href="/settings"
-                className="inline-flex h-10 items-center rounded-full border border-border px-4 text-xs uppercase tracking-[0.16em] text-muted hover:text-gold"
-              >
-                Settings
-              </Link>
             </div>
 
             {tab === "piezas" ? (
@@ -233,9 +233,7 @@ export default function Admin() {
                   return (
                     <div
                       key={p.id}
-                      className={`rounded-[var(--radius-xl)] border border-border bg-surface p-4 ${
-                        !p.active ? "opacity-50" : ""
-                      }`}
+                      className={`rounded-[var(--radius-xl)] border border-border bg-surface p-4 ${p.sold ? "opacity-80" : ""}`}
                     >
                       <div className="relative aspect-square overflow-hidden rounded-[var(--radius-lg)] bg-elevated">
                         {p.image ? (
@@ -243,9 +241,9 @@ export default function Admin() {
                         ) : (
                           <div className="flex size-full items-center justify-center text-subtle">Sin imagen</div>
                         )}
-                        {!p.active ? (
-                          <span className="absolute left-2 top-2 rounded-full bg-bg/80 px-2 py-1 text-[10px] uppercase tracking-wide text-muted">
-                            Oculta
+                        {p.sold ? (
+                          <span className="absolute left-2 top-2 rounded-full bg-gold px-2 py-1 text-[10px] uppercase tracking-wide text-bg">
+                            Vendido
                           </span>
                         ) : null}
                       </div>
@@ -274,36 +272,17 @@ export default function Admin() {
                         />
                       </div>
                       <div className="mt-3 flex flex-wrap gap-2">
-                        <button
-                          type="button"
-                          className="h-9 rounded-full border border-border px-3 text-xs"
-                          onClick={() => openEdit(p)}
-                        >
-                          Editar
-                        </button>
-                        {p.active ? (
-                          <button
-                            type="button"
-                            className="h-9 rounded-full border border-danger/40 px-3 text-xs text-danger"
-                            onClick={async () => {
-                              await api.adminUpdateProduct(p.id, { active: false, stock: 0 });
-                              showToast("Pieza ocultada (no eliminada)");
-                              await load();
-                            }}
-                          >
-                            Ocultar
-                          </button>
+                        {p.sold ? (
+                          <span className="inline-flex h-9 items-center rounded-full border border-gold/40 bg-gold/10 px-3 text-xs uppercase tracking-wide text-gold">
+                            Vendido
+                          </span>
                         ) : (
                           <button
                             type="button"
-                            className="h-9 rounded-full border border-gold/40 px-3 text-xs text-gold"
-                            onClick={async () => {
-                              await api.adminUpdateProduct(p.id, { active: true, stock: 1 });
-                              showToast("Pieza visible de nuevo");
-                              await load();
-                            }}
+                            className="h-9 rounded-full border border-border px-3 text-xs"
+                            onClick={() => openEdit(p)}
                           >
-                            Restaurar
+                            Editar
                           </button>
                         )}
                       </div>
@@ -311,6 +290,17 @@ export default function Admin() {
                   );
                 })}
               </div>
+
+            ) : tab === "settings" ? (
+              <AdminSettingsPanel
+                settings={settings}
+                products={products}
+                onSaved={async (s) => {
+                  setSettings(s);
+                  showToast("Settings guardados");
+                }}
+                onError={(m) => showToast(m, "error")}
+              />
             ) : (
               <div className="mt-8 space-y-4">
                 {orders.length === 0 ? (
@@ -540,5 +530,116 @@ export default function Admin() {
         )}
       </PageShell>
     </>
+  );
+}
+
+
+function AdminSettingsPanel({ settings, products, onSaved, onError }) {
+  const [categories, setCategories] = useState(settings?.categories || []);
+  const [spot, setSpot] = useState(settings?.goldSpotByKarat || {});
+  const [margin, setMargin] = useState(settings?.marginPercent ?? 35);
+  const [iva, setIva] = useState(settings?.ivaPercent ?? 16);
+  const [newCat, setNewCat] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (!settings) return;
+    setCategories(settings.categories || []);
+    setSpot(settings.goldSpotByKarat || {});
+    setMargin(settings.marginPercent ?? 35);
+    setIva(settings.ivaPercent ?? 16);
+  }, [settings]);
+
+  const usedKarats = Array.from(
+    new Set(
+      (products || [])
+        .filter((p) => !p.sold)
+        .map((p) => {
+          const k = String(p.purity || p.karat || "").toUpperCase();
+          return k.endsWith("K") ? k : k ? `${k}K` : null;
+        })
+        .filter(Boolean),
+    ),
+  ).sort((a, b) => parseInt(a, 10) - parseInt(b, 10));
+
+  async function save() {
+    setBusy(true);
+    try {
+      const { settings: next } = await api.adminUpdateSettings({
+        categories,
+        goldSpotByKarat: spot,
+        marginPercent: Number(margin),
+        ivaPercent: Number(iva),
+      });
+      onSaved?.(next);
+    } catch (e) {
+      onError?.(e.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="mt-8 space-y-6">
+      <div className="rounded-[var(--radius-xl)] border border-border bg-surface p-6">
+        <h2 className="font-display text-2xl">Categorías</h2>
+        <ul className="mt-4 space-y-2">
+          {categories.map((c) => (
+            <li key={c.id} className="flex justify-between text-sm">
+              <span>{c.name}</span>
+              <button type="button" className="text-xs text-danger" onClick={() => setCategories(categories.filter((x) => x.id !== c.id))}>
+                Quitar
+              </button>
+            </li>
+          ))}
+        </ul>
+        <div className="mt-3 flex gap-2">
+          <input className="h-11 flex-1 rounded-md border border-border bg-bg px-3" value={newCat} maxLength={40} onChange={(e) => setNewCat(e.target.value)} placeholder="Nueva categoría" />
+          <button
+            type="button"
+            className="h-11 rounded-full border border-border px-4 text-xs uppercase"
+            onClick={() => {
+              const name = newCat.trim();
+              if (!name) return;
+              const id = name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-");
+              if (categories.some((c) => c.id === id)) return;
+              setCategories([...categories, { id, name, slug: id }]);
+              setNewCat("");
+            }}
+          >
+            Añadir
+          </button>
+        </div>
+      </div>
+      <div className="rounded-[var(--radius-xl)] border border-border bg-surface p-6">
+        <h2 className="font-display text-2xl">Precio spot oro (MXN / g)</h2>
+        <p className="mt-2 text-sm text-muted">Kilatajes de piezas disponibles (no vendidas). Fórmula: spot × peso × (1+margen) × (1+IVA).</p>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          {(usedKarats.length ? usedKarats : ["10K", "14K", "18K", "24K"]).map((k) => (
+            <label key={k} className="block text-xs text-subtle">
+              Spot {k}
+              <input
+                className="mt-1 h-11 w-full rounded-md border border-border bg-bg px-3 tabular-nums"
+                value={spot[k] ?? ""}
+                onChange={(e) => setSpot({ ...spot, [k]: e.target.value.replace(/[^\d.]/g, "").slice(0, 12) })}
+              />
+            </label>
+          ))}
+        </div>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          <label className="block text-xs text-subtle">
+            Margen %
+            <input className="mt-1 h-11 w-full rounded-md border border-border bg-bg px-3" value={margin} onChange={(e) => setMargin(e.target.value.replace(/[^\d.]/g, "").slice(0, 5))} />
+          </label>
+          <label className="block text-xs text-subtle">
+            IVA %
+            <input className="mt-1 h-11 w-full rounded-md border border-border bg-bg px-3" value={iva} onChange={(e) => setIva(e.target.value.replace(/[^\d.]/g, "").slice(0, 5))} />
+          </label>
+        </div>
+      </div>
+      <button type="button" disabled={busy} onClick={save} className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-gold text-xs tracking-[0.2em] uppercase text-bg disabled:opacity-50">
+        {busy ? "Guardando…" : "Guardar settings"}
+      </button>
+    </div>
   );
 }

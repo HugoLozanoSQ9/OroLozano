@@ -34,14 +34,9 @@ export function SiteHeader() {
             {isLoggedIn ? "Mi cuenta" : "Entrar"}
           </Link>
           {user?.role === "admin" ? (
-            <>
-              <Link href="/admin" className="text-gold">
-                Atelier
-              </Link>
-              <Link href="/settings" className="hover:text-gold">
-                Settings
-              </Link>
-            </>
+            <Link href="/admin" className="text-gold">
+              Atelier
+            </Link>
           ) : null}
           {isLoggedIn ? (
             <button
@@ -68,7 +63,6 @@ export function SiteHeader() {
           {user?.role === "admin" ? (
             <>
               <Link href="/admin" onClick={() => setOpen(false)}>Atelier</Link>
-              <Link href="/settings" onClick={() => setOpen(false)}>Settings</Link>
             </>
           ) : null}
         </div>

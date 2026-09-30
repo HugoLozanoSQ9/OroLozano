@@ -51,6 +51,7 @@ function mapProduct(row) {
     images: row.images || [],
     featured: Boolean(row.featured),
     active: row.active !== false,
+    sold: Boolean(row.sold),
     stones: row.stones || "none",
     stonesNote: row.stones_note || "",
     certificate: row.certificate || null,
@@ -196,7 +197,9 @@ export async function updateUser(id, patch) {
 
 export async function listProducts(opts = {}) {
   let q = sb().from("products").select("*").order("created_at", { ascending: false });
-  if (!opts.includeHidden) q = q.eq("active", true);
+  if (!opts.includeHidden) {
+    q = q.eq("active", true).eq("sold", false);
+  }
   const { data, error } = await q;
   if (error) throw new Error(error.message);
   return (data || []).map(mapProduct);
@@ -257,6 +260,7 @@ export async function createProduct(input) {
     weight_grams: Number(input.weightGrams ?? 0),
     price: Number(input.price),
     stock: 1,
+    sold: false,
     image: input.image || "/products/anillo-sello.svg",
     images: input.images || [input.image || "/products/anillo-sello.svg"],
     featured: Boolean(input.featured),
@@ -293,6 +297,7 @@ export async function updateProduct(id, patch) {
   if (patch.images !== undefined) update.images = patch.images;
   if (patch.featured !== undefined) update.featured = Boolean(patch.featured);
   if (patch.active !== undefined) update.active = Boolean(patch.active);
+  if (patch.sold !== undefined) update.sold = Boolean(patch.sold);
   if (patch.priceBreakdown !== undefined) update.price_breakdown = patch.priceBreakdown;
   if (patch.certificate) {
     const prev = current.certificate || {};
@@ -591,9 +596,26 @@ export async function updateAdminData(patch) {
   return mapAdminData(data);
 }
 
+export async function markProductSold(id) {
+  return updateProduct(id, { active: false, stock: 0, sold: true });
+}
+
+export async function cancelOpenOrdersForProduct(productId, note = "Producto reintegrado al catálogo") {
+  const { data: orders, error } = await sb().from("orders").select("*");
+  if (error) throw new Error(error.message);
+  const open = ["recibido", "confirmado", "en_envio", "enviado"];
+  for (const o of orders || []) {
+    const has = (o.items || []).some((it) => it.productId === productId);
+    if (!has) continue;
+    if (!open.includes(o.status)) continue;
+    await updateOrderStatus(o.id, "cancelado", note);
+  }
+}
+
 export async function softDeleteProduct(id) {
   return updateProduct(id, { active: false, stock: 0 });
 }
+
 
 
 export { verifyPassword, publicImageUrl };

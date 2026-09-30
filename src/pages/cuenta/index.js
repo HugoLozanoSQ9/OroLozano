@@ -3,45 +3,29 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { PageShell, useAuth } from "@/components/SiteChrome";
 import { Toast } from "@/components/Toast";
+import { Loader, ButtonSpinner } from "@/components/Loader";
+import { setSession } from "@/lib/store/auth-client";
+import { statusLabel } from "@/lib/store/order-status";
 import {
-  MX_STATES,
   onlyAlnumUser,
   onlyDigits,
   onlyLettersSpaces,
   validateEmail,
-  validatePhoneMx,
-  validateZipMx,
 } from "@/lib/store/mx-validate";
-import { setSession } from "@/lib/store/auth-client";
-import { statusLabel } from "@/lib/store/order-status";
 import { api, formatMxn } from "@/lib/store/client";
-
-const emptyShipping = {
-  fullName: "",
-  phone: "",
-  street: "",
-  extNumber: "",
-  intNumber: "",
-  neighborhood: "",
-  city: "",
-  state: "",
-  zip: "",
-  references: "",
-  betweenStreets: "",
-};
 
 export default function Cuenta() {
   const { user, token, loading, refresh, setAuth } = useAuth();
-  const [mode, setMode] = useState("login"); // login | register | forgot | reset
+  const [mode, setMode] = useState("login");
+  const [tab, setTab] = useState("pedidos"); // pedidos | perfil | password
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
   const [orders, setOrders] = useState([]);
+  const [ordersLoading, setOrdersLoading] = useState(false);
   const [profile, setProfile] = useState({ name: "", email: "", phone: "" });
-  const [shipping, setShipping] = useState(emptyShipping);
-  const [saved, setSaved] = useState("");
   const [otp, setOtp] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [recoverEmail, setRecoverEmail] = useState("");
@@ -50,15 +34,25 @@ export default function Cuenta() {
   const [currentPassword, setCurrentPassword] = useState("");
   const [changeNewPassword, setChangeNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     if (!user) return;
     setProfile({ name: user.name || "", email: user.email || "", phone: user.phone || "" });
-    setShipping({ ...emptyShipping, ...(user.shipping || {}), fullName: user.shipping?.fullName || user.name || "" });
     if (user.role !== "admin") {
-      api.orders().then((d) => setOrders(d.orders)).catch(() => {});
+      setOrdersLoading(true);
+      api
+        .orders()
+        .then((d) => setOrders(d.orders || []))
+        .catch(() => {})
+        .finally(() => setOrdersLoading(false));
     }
   }, [user]);
+
+  function showToast(msg, type = "success") {
+    setToastType(type);
+    setToast(msg);
+  }
 
   return (
     <>
@@ -68,17 +62,13 @@ export default function Cuenta() {
       <PageShell>
         <Toast message={toast} type={toastType} onClose={() => setToast("")} />
         {loading ? (
-          <p className="py-20 text-center text-muted">Cargando…</p>
+          <Loader label="Cargando cuenta…" />
         ) : user && token ? (
           user.role === "admin" ? (
             <section className="mx-auto max-w-2xl px-5 py-16 text-center md:px-8">
               <p className="text-xs tracking-[0.28em] uppercase text-gold">Administrador</p>
               <h1 className="mt-2 text-4xl">{user.name}</h1>
               <p className="mt-2 text-muted">@{user.username}</p>
-              <p className="mx-auto mt-6 max-w-md text-sm text-muted">
-                La cuenta de atelier no gestiona datos de envío personales.
-                Usa el panel para piezas, certificados y despacho de pedidos.
-              </p>
               <Link
                 href="/admin"
                 className="mt-8 inline-flex h-12 items-center rounded-full bg-gold px-8 text-xs tracking-[0.18em] uppercase text-bg"
@@ -87,162 +77,146 @@ export default function Cuenta() {
               </Link>
             </section>
           ) : (
-            <section className="mx-auto max-w-3xl px-5 py-12 md:px-8">
+            <section className="mx-auto max-w-3xl px-5 py-10 md:px-8">
               <p className="text-xs tracking-[0.28em] uppercase text-gold">Cliente</p>
               <h1 className="mt-2 text-4xl">{user.name}</h1>
               <p className="mt-2 text-muted">@{user.username} · {user.email}</p>
 
-              <form
-                className="mt-12 space-y-4 rounded-[var(--radius-xl)] border border-border bg-surface p-6"
-                onSubmit={async (e) => {
-                  e.preventDefault();
-                  setSaved("");
-                  setError("");
-                  const e1 = validateEmail(profile.email);
-                  const e2 = validatePhoneMx(profile.phone);
-                  const e3 = shipping.zip ? validateZipMx(shipping.zip) : null;
-                  if (e1 || e2 || e3) {
-                    setError(e1 || e2 || e3);
-                    setToastType("error");
-                    setToast(e1 || e2 || e3);
-                    return;
-                  }
-                  try {
-                    const { user: updated } = await api.updateProfile({
-                      name: onlyLettersSpaces(profile.name, 80),
-                      email: profile.email.trim().toLowerCase().slice(0, 80),
-                      phone: onlyDigits(profile.phone, 10),
-                      shipping: {
-                        ...shipping,
-                        fullName: onlyLettersSpaces(shipping.fullName, 80),
-                        phone: onlyDigits(shipping.phone, 10),
-                        zip: onlyDigits(shipping.zip, 5),
-                        street: String(shipping.street || "").slice(0, 80),
-                        extNumber: String(shipping.extNumber || "").slice(0, 10),
-                        intNumber: String(shipping.intNumber || "").slice(0, 10),
-                        neighborhood: String(shipping.neighborhood || "").slice(0, 60),
-                        city: onlyLettersSpaces(shipping.city, 60),
-                        references: String(shipping.references || "").slice(0, 120),
-                        betweenStreets: String(shipping.betweenStreets || "").slice(0, 80),
-                      },
-                    });
-                    setSession(token, updated);
-                    setAuth(token, updated);
-                    setSaved("Datos guardados");
-                    setToastType("success");
-                    setToast("Datos guardados correctamente");
-                    await refresh();
-                  } catch (err) {
-                    setError(err.message);
-                    setToastType("error");
-                    setToast(err.message);
-                  }
-                }}
-              >
-                <h2 className="font-display text-2xl">Datos personales</h2>
-                <div className="grid gap-3 md:grid-cols-2">
-                  <Field label="Nombre completo" value={profile.name} onChange={(v) => setProfile({ ...profile, name: v })} />
-                  <Field label="Correo" value={profile.email} onChange={(v) => setProfile({ ...profile, email: v })} />
-                  <Field label="Teléfono" value={profile.phone} onChange={(v) => setProfile({ ...profile, phone: v })} />
-                </div>
+              {/* Mini menú superior */}
+              <nav className="mt-8 flex flex-wrap gap-2 border-b border-border pb-4">
+                {[
+                  { id: "pedidos", label: "Mis pedidos" },
+                  { id: "perfil", label: "Datos personales" },
+                  { id: "password", label: "Contraseña" },
+                ].map((t) => (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => setTab(t.id)}
+                    className={`h-10 rounded-full px-4 text-xs uppercase tracking-[0.16em] ${
+                      tab === t.id ? "bg-gold text-bg" : "border border-border text-muted hover:text-gold"
+                    }`}
+                  >
+                    {t.label}
+                  </button>
+                ))}
+              </nav>
 
-                <h2 className="pt-4 font-display text-2xl">Dirección de envío (México)</h2>
-                <p className="text-sm text-muted">Datos para paquetería nacional.</p>
-                <div className="grid gap-3 md:grid-cols-2">
-                  <Field label="Nombre quien recibe" value={shipping.fullName} onChange={(v) => setShipping({ ...shipping, fullName: v })} />
-                  <Field label="Teléfono de contacto" value={shipping.phone} onChange={(v) => setShipping({ ...shipping, phone: v })} />
-                  <Field label="Calle" value={shipping.street} onChange={(v) => setShipping({ ...shipping, street: v })} />
-                  <Field label="No. exterior" value={shipping.extNumber} onChange={(v) => setShipping({ ...shipping, extNumber: v })} />
-                  <Field label="No. interior" value={shipping.intNumber} onChange={(v) => setShipping({ ...shipping, intNumber: v })} />
-                  <Field label="Colonia" value={shipping.neighborhood} onChange={(v) => setShipping({ ...shipping, neighborhood: v })} />
-                  <Field label="Ciudad / Municipio" value={shipping.city} onChange={(v) => setShipping({ ...shipping, city: v })} />
-                  <label className="block">
-                    <span className="mb-1 block text-xs tracking-[0.16em] uppercase text-subtle">Estado</span>
-                    <select
-                      value={shipping.state}
-                      onChange={(e) => setShipping({ ...shipping, state: e.target.value })}
-                      className="h-12 w-full rounded-[var(--radius-md)] border border-border bg-bg px-4"
-                    >
-                      <option value="">Selecciona</option>
-                      {MX_STATES.map((s) => (
-                        <option key={s} value={s}>{s}</option>
-                      ))}
-                    </select>
-                  </label>
-                  <Field label="C.P." value={shipping.zip} onChange={(v) => setShipping({ ...shipping, zip: v })} />
-                  <Field label="Entre calles" value={shipping.betweenStreets} onChange={(v) => setShipping({ ...shipping, betweenStreets: v })} />
-                  <div className="md:col-span-2">
-                    <Field label="Referencias" value={shipping.references} onChange={(v) => setShipping({ ...shipping, references: v })} />
-                  </div>
-                </div>
-                {error ? <p className="text-sm text-danger">{error}</p> : null}
-                {saved ? <p className="text-sm text-gold">{saved}</p> : null}
-                <button type="submit" className="h-12 rounded-full bg-gold px-8 text-xs tracking-[0.2em] uppercase text-bg">
-                  Guardar cambios
-                </button>
-              </form>
-
-              
-              <form
-                className="mt-10 space-y-3 rounded-[var(--radius-xl)] border border-border bg-surface p-6"
-                onSubmit={async (e) => {
-                  e.preventDefault();
-                  setError("");
-                  if (changeNewPassword !== confirmPassword) {
-                    setToastType("error");
-                    setToast("Las contraseñas no coinciden");
-                    return;
-                  }
-                  try {
-                    const res = await api.changePassword({ currentPassword, newPassword: changeNewPassword });
-                    setToastType("success");
-                    setToast(res.message || "Contraseña actualizada");
-                    setCurrentPassword("");
-                    setChangeNewPassword("");
-                    setConfirmPassword("");
-                  } catch (err) {
-                    setToastType("error");
-                    setToast(err.message);
-                  }
-                }}
-              >
-                <h2 className="font-display text-2xl">Cambiar contraseña</h2>
-                <p className="text-sm text-muted">Si ya iniciaste sesión no necesitas OTP de recuperación.</p>
-                <Field label="Contraseña actual" value={currentPassword} onChange={setCurrentPassword} type="password" />
-                <Field label="Nueva contraseña (mín. 6)" value={changeNewPassword} onChange={setChangeNewPassword} type="password" />
-                <Field label="Confirmar nueva" value={confirmPassword} onChange={setConfirmPassword} type="password" />
-                <button type="submit" className="h-11 rounded-full bg-gold px-6 text-xs tracking-[0.18em] uppercase text-bg">
-                  Actualizar contraseña
-                </button>
-              </form>
-
-              <h2 className="mt-12 font-display text-2xl">Mis pedidos</h2>
-              <p className="mt-1 text-sm text-muted">Historial permanente — no se eliminan.</p>
-              <div className="mt-4 space-y-3">
-                {orders.length === 0 ? (
-                  <p className="text-muted">Aún no hay pedidos.</p>
-                ) : (
-                  orders.map((o) => (
-                    <div key={o.id} className="rounded-[var(--radius-lg)] border border-border p-4">
-                      <p className="text-sm text-gold">{o.id}</p>
-                      <p className="tabular-nums">{formatMxn(o.total)}</p>
-                      <p className="mt-1 text-sm text-gold-strong">{statusLabel(o.status || "recibido")}</p>
-                      <p className="text-sm text-muted">
-                        {o.shippingName || o.shipping?.fullName} · {o.shippingCity || o.shipping?.city}
-                      </p>
-                      {Array.isArray(o.statusHistory) && o.statusHistory.length > 1 ? (
-                        <ol className="mt-3 space-y-1 text-xs text-subtle">
-                          {o.statusHistory.map((h, i) => (
-                            <li key={i}>
-                              {new Date(h.at).toLocaleString("es-MX")} — {statusLabel(h.status)}
-                            </li>
-                          ))}
-                        </ol>
-                      ) : null}
+              {tab === "pedidos" && (
+                <div className="mt-8">
+                  <p className="text-sm text-muted">
+                    Historial permanente. Los datos de envío se capturan al confirmar el pedido, no aquí.
+                  </p>
+                  {ordersLoading ? (
+                    <Loader label="Cargando pedidos…" />
+                  ) : (
+                    <div className="mt-4 space-y-3">
+                      {orders.length === 0 ? (
+                        <p className="text-muted">Aún no hay pedidos.</p>
+                      ) : (
+                        orders.map((o) => (
+                          <div key={o.id} className="rounded-[var(--radius-lg)] border border-border p-4">
+                            <p className="text-sm text-gold">{o.id}</p>
+                            <p className="tabular-nums">{formatMxn(o.total)}</p>
+                            <p
+                              className={`mt-1 text-sm ${
+                                o.status === "cancelado" ? "text-danger" : "text-gold-strong"
+                              }`}
+                            >
+                              {statusLabel(o.status || "recibido")}
+                            </p>
+                            {(o.shippingName || o.shipping?.fullName) && (
+                              <p className="text-sm text-muted">
+                                Envío: {o.shippingName || o.shipping?.fullName} ·{" "}
+                                {o.shippingCity || o.shipping?.city}
+                              </p>
+                            )}
+                          </div>
+                        ))
+                      )}
                     </div>
-                  ))
-                )}
-              </div>
+                  )}
+                </div>
+              )}
+
+              {tab === "perfil" && (
+                <form
+                  className="mt-8 space-y-4 rounded-[var(--radius-xl)] border border-border bg-surface p-6"
+                  onSubmit={async (e) => {
+                    e.preventDefault();
+                    const e1 = validateEmail(profile.email);
+                    if (e1) {
+                      showToast(e1, "error");
+                      return;
+                    }
+                    setBusy(true);
+                    try {
+                      const { user: updated } = await api.updateProfile({
+                        name: onlyLettersSpaces(profile.name, 80),
+                        email: profile.email.trim().toLowerCase().slice(0, 80),
+                        phone: onlyDigits(profile.phone, 10),
+                      });
+                      setSession(token, updated);
+                      setAuth(token, updated);
+                      showToast("Datos guardados");
+                      await refresh();
+                    } catch (err) {
+                      showToast(err.message, "error");
+                    } finally {
+                      setBusy(false);
+                    }
+                  }}
+                >
+                  <h2 className="font-display text-2xl">Datos personales</h2>
+                  <p className="text-sm text-muted">
+                    La dirección de envío se solicita solo al confirmar un pedido (pagos con envío).
+                  </p>
+                  <Field label="Nombre completo" value={profile.name} onChange={(v) => setProfile({ ...profile, name: onlyLettersSpaces(v, 80) })} maxLength={80} />
+                  <Field label="Correo" value={profile.email} onChange={(v) => setProfile({ ...profile, email: v.slice(0, 80) })} maxLength={80} />
+                  <Field label="Teléfono (10 dígitos)" value={profile.phone} onChange={(v) => setProfile({ ...profile, phone: onlyDigits(v, 10) })} maxLength={10} inputMode="numeric" />
+                  <button type="submit" disabled={busy} className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-gold px-8 text-xs tracking-[0.2em] uppercase text-bg disabled:opacity-50">
+                    {busy ? <ButtonSpinner /> : null}
+                    Guardar cambios
+                  </button>
+                </form>
+              )}
+
+              {tab === "password" && (
+                <form
+                  className="mt-8 space-y-3 rounded-[var(--radius-xl)] border border-border bg-surface p-6"
+                  onSubmit={async (e) => {
+                    e.preventDefault();
+                    if (changeNewPassword !== confirmPassword) {
+                      showToast("Las contraseñas no coinciden", "error");
+                      return;
+                    }
+                    setBusy(true);
+                    try {
+                      const res = await api.changePassword({
+                        currentPassword,
+                        newPassword: changeNewPassword,
+                      });
+                      showToast(res.message || "Contraseña actualizada");
+                      setCurrentPassword("");
+                      setChangeNewPassword("");
+                      setConfirmPassword("");
+                    } catch (err) {
+                      showToast(err.message, "error");
+                    } finally {
+                      setBusy(false);
+                    }
+                  }}
+                >
+                  <h2 className="font-display text-2xl">Cambiar contraseña</h2>
+                  <Field label="Contraseña actual" value={currentPassword} onChange={setCurrentPassword} type="password" />
+                  <Field label="Nueva (mín. 6)" value={changeNewPassword} onChange={setChangeNewPassword} type="password" />
+                  <Field label="Confirmar nueva" value={confirmPassword} onChange={setConfirmPassword} type="password" />
+                  <button type="submit" disabled={busy} className="inline-flex h-12 items-center gap-2 rounded-full bg-gold px-8 text-xs tracking-[0.18em] uppercase text-bg disabled:opacity-50">
+                    {busy ? <ButtonSpinner /> : null}
+                    Actualizar contraseña
+                  </button>
+                </form>
+              )}
             </section>
           )
         ) : (
@@ -256,7 +230,7 @@ export default function Cuenta() {
             <p className="mt-3 text-center text-sm text-muted">
               {mode === "login" || mode === "register"
                 ? "Cliente: juan / uwu · Admin: hugo / 1"
-                : "Te enviaremos un código OTP al correo registrado"}
+                : "Código OTP al correo registrado"}
             </p>
 
             {(mode === "login" || mode === "register") && (
@@ -265,30 +239,40 @@ export default function Cuenta() {
                 onSubmit={async (e) => {
                   e.preventDefault();
                   setError("");
+                  setBusy(true);
                   try {
                     if (mode === "login") {
                       const data = await api.login(username, password);
                       setAuth(data.token, data.user);
                     } else {
-                      const data = await api.register({ username, password, name, email });
+                      if (validateEmail(email)) throw new Error(validateEmail(email));
+                      const data = await api.register({
+                        username: onlyAlnumUser(username),
+                        password,
+                        name: onlyLettersSpaces(name, 80),
+                        email: email.trim().toLowerCase(),
+                      });
                       setAuth(data.token, data.user);
                     }
                     await refresh();
                   } catch (err) {
                     setError(err.message);
+                  } finally {
+                    setBusy(false);
                   }
                 }}
               >
                 {mode === "register" ? (
                   <>
-                    <Field label="Nombre" value={name} onChange={setName} />
-                    <Field label="Correo" value={email} onChange={setEmail} />
+                    <Field label="Nombre" value={name} onChange={(v) => setName(onlyLettersSpaces(v, 80))} maxLength={80} />
+                    <Field label="Correo" value={email} onChange={setEmail} maxLength={80} />
                   </>
                 ) : null}
-                <Field label="Usuario" value={username} onChange={setUsername} />
+                <Field label="Usuario" value={username} onChange={(v) => setUsername(onlyAlnumUser(v))} maxLength={24} />
                 <Field label="Contraseña" value={password} onChange={setPassword} type="password" />
                 {error ? <p className="text-sm text-danger">{error}</p> : null}
-                <button type="submit" className="h-12 w-full rounded-full bg-gold text-xs tracking-[0.2em] uppercase text-bg">
+                <button type="submit" disabled={busy} className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-gold text-xs tracking-[0.2em] uppercase text-bg disabled:opacity-50">
+                  {busy ? <ButtonSpinner /> : null}
                   {mode === "login" ? "Entrar" : "Registrarme"}
                 </button>
               </form>
@@ -299,21 +283,21 @@ export default function Cuenta() {
                 className="mt-8 space-y-3"
                 onSubmit={async (e) => {
                   e.preventDefault();
-                  setError("");
-                  setSaved("");
+                  setBusy(true);
                   try {
                     const res = await api.forgotPassword(recoverEmail);
-                    setSaved(res.message || "Revisa tu correo");
+                    showToast(res.message || "Revisa tu correo");
                     setMode("reset");
                   } catch (err) {
                     setError(err.message);
+                  } finally {
+                    setBusy(false);
                   }
                 }}
               >
                 <Field label="Correo registrado" value={recoverEmail} onChange={setRecoverEmail} />
                 {error ? <p className="text-sm text-danger">{error}</p> : null}
-                {saved ? <p className="text-sm text-gold">{saved}</p> : null}
-                <button type="submit" className="h-12 w-full rounded-full bg-gold text-xs tracking-[0.2em] uppercase text-bg">
+                <button type="submit" disabled={busy} className="h-12 w-full rounded-full bg-gold text-xs tracking-[0.2em] uppercase text-bg">
                   Enviar código OTP
                 </button>
               </form>
@@ -324,30 +308,23 @@ export default function Cuenta() {
                 className="mt-8 space-y-3"
                 onSubmit={async (e) => {
                   e.preventDefault();
-                  setError("");
-                  setSaved("");
+                  setBusy(true);
                   try {
-                    const res = await api.resetPassword({
-                      email: recoverEmail,
-                      otp,
-                      newPassword,
-                    });
-                    setSaved(res.message || "Contraseña actualizada");
+                    const res = await api.resetPassword({ email: recoverEmail, otp, newPassword });
+                    showToast(res.message || "Contraseña actualizada");
                     setMode("login");
-                    setPassword("");
-                    setOtp("");
-                    setNewPassword("");
                   } catch (err) {
                     setError(err.message);
+                  } finally {
+                    setBusy(false);
                   }
                 }}
               >
                 <Field label="Correo" value={recoverEmail} onChange={setRecoverEmail} />
-                <Field label="Código OTP (6 dígitos)" value={otp} onChange={setOtp} />
+                <Field label="Código OTP" value={otp} onChange={setOtp} />
                 <Field label="Nueva contraseña" value={newPassword} onChange={setNewPassword} type="password" />
                 {error ? <p className="text-sm text-danger">{error}</p> : null}
-                {saved ? <p className="text-sm text-gold">{saved}</p> : null}
-                <button type="submit" className="h-12 w-full rounded-full bg-gold text-xs tracking-[0.2em] uppercase text-bg">
+                <button type="submit" disabled={busy} className="h-12 w-full rounded-full bg-gold text-xs tracking-[0.2em] uppercase text-bg">
                   Guardar nueva contraseña
                 </button>
               </form>
@@ -357,9 +334,9 @@ export default function Cuenta() {
               {(mode === "login" || mode === "register") && (
                 <>
                   <button type="button" className="block w-full hover:text-gold" onClick={() => setMode(mode === "login" ? "register" : "login")}>
-                    {mode === "login" ? "¿Nuevo? Crea tu cuenta de cliente" : "Ya tengo cuenta"}
+                    {mode === "login" ? "¿Nuevo? Crea tu cuenta" : "Ya tengo cuenta"}
                   </button>
-                  <button type="button" className="block w-full hover:text-gold" onClick={() => { setMode("forgot"); setError(""); setSaved(""); }}>
+                  <button type="button" className="block w-full hover:text-gold" onClick={() => setMode("forgot")}>
                     ¿Olvidaste tu contraseña?
                   </button>
                 </>
