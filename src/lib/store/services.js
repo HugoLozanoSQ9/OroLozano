@@ -612,6 +612,42 @@ export async function updateAdminData(patch) {
   return mapAdminData(data);
 }
 
+
+export async function markProductSold(id) {
+  return updateProduct(id, { active: false, stock: 0, sold: true });
+}
+
+/** Libera una pieza vendida/reservada para volver al catálogo */
+export async function releaseProduct(id) {
+  return updateProduct(id, { active: true, stock: 1, sold: false });
+}
+
+export async function updateOrderShipping(orderId, shipping, shippingName, shippingCity) {
+  const { data: current, error: readErr } = await sb()
+    .from("orders")
+    .select("*")
+    .eq("id", orderId)
+    .maybeSingle();
+  if (readErr) throw new Error(readErr.message);
+  if (!current) return null;
+  if (["cancelado", "finalizado", "enviado"].includes(current.status)) {
+    throw new Error("Ya no se pueden editar los datos de envío de este pedido");
+  }
+  const { data, error } = await sb()
+    .from("orders")
+    .update({
+      shipping: shipping || current.shipping || {},
+      shipping_name: shippingName || shipping?.fullName || current.shipping_name || "",
+      shipping_city: shippingCity || shipping?.city || current.shipping_city || "",
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", orderId)
+    .select("*")
+    .single();
+  if (error) throw new Error(error.message);
+  return mapOrder(data);
+}
+
 export async function softDeleteProduct(id) {
   return updateProduct(id, { active: false, stock: 0 });
 }
