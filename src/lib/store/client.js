@@ -107,6 +107,16 @@ export const api = {
       method: "POST",
       body: JSON.stringify(payload),
     }),
+  updateOrderShipping: (orderId, shipping) =>
+    request("/api/orders", {
+      method: "PATCH",
+      body: JSON.stringify({ orderId, shipping }),
+    }),
+  adminReleaseOrderProducts: (id) =>
+    request(`/api/admin/orders/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ action: "release_products" }),
+    }),
   adminUpdateOrder: (id, payload) =>
     request(`/api/admin/orders/${id}`, {
       method: "PATCH",

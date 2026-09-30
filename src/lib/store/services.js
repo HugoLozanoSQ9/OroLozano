@@ -197,9 +197,7 @@ export async function updateUser(id, patch) {
 
 export async function listProducts(opts = {}) {
   let q = sb().from("products").select("*").order("created_at", { ascending: false });
-  if (!opts.includeHidden) {
-    q = q.eq("active", true).eq("sold", false);
-  }
+  if (!opts.includeHidden) q = q.eq("active", true).eq("sold", false);
   const { data, error } = await q;
   if (error) throw new Error(error.message);
   return (data || []).map(mapProduct);
@@ -397,8 +395,18 @@ export async function updateOrderStatus(orderId, status, note = "") {
     .maybeSingle();
   if (readErr) throw new Error(readErr.message);
   if (!current) return null;
+  if (current.status === "cancelado" && status !== "cancelado") {
+    throw new Error("Un pedido cancelado no puede cambiar de estatus");
+  }
+  if (current.status === "finalizado" && status !== "finalizado") {
+    throw new Error("Un pedido finalizado no puede cambiar de estatus");
+  }
   const history = Array.isArray(current.status_history) ? [...current.status_history] : [];
-  history.push({ status, at: new Date().toISOString(), note: note || "" });
+  history.push({
+    status,
+    note: note || "",
+    at: new Date().toISOString(),
+  });
   const { data, error } = await sb()
     .from("orders")
     .update({
@@ -410,6 +418,14 @@ export async function updateOrderStatus(orderId, status, note = "") {
     .select("*")
     .single();
   if (error) throw new Error(error.message);
+  // Al cancelar, liberar piezas automáticamente
+  if (status === "cancelado") {
+    for (const item of data.items || []) {
+      if (item.productId) {
+        await releaseProduct(item.productId);
+      }
+    }
+  }
   return mapOrder(data);
 }
 
@@ -596,26 +612,9 @@ export async function updateAdminData(patch) {
   return mapAdminData(data);
 }
 
-export async function markProductSold(id) {
-  return updateProduct(id, { active: false, stock: 0, sold: true });
-}
-
-export async function cancelOpenOrdersForProduct(productId, note = "Producto reintegrado al catálogo") {
-  const { data: orders, error } = await sb().from("orders").select("*");
-  if (error) throw new Error(error.message);
-  const open = ["recibido", "confirmado", "en_envio", "enviado"];
-  for (const o of orders || []) {
-    const has = (o.items || []).some((it) => it.productId === productId);
-    if (!has) continue;
-    if (!open.includes(o.status)) continue;
-    await updateOrderStatus(o.id, "cancelado", note);
-  }
-}
-
 export async function softDeleteProduct(id) {
   return updateProduct(id, { active: false, stock: 0 });
 }
-
 
 
 export { verifyPassword, publicImageUrl };

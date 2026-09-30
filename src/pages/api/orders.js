@@ -6,6 +6,7 @@ import {
   listOrders,
   setCart,
   markProductSold,
+  updateOrderShipping,
 } from "@/lib/store/services";
 
 export default async function handler(req, res) {
@@ -41,20 +42,50 @@ export default async function handler(req, res) {
       });
       total += product.price;
     }
+    if (lines.length === 0) return json(res, { error: "No hay piezas válidas en el carrito" }, 400);
+
     for (const line of lines) {
       await markProductSold(line.productId);
     }
+
     const body = req.body || {};
+    const shipping = body.shipping || {};
     const order = await createOrder({
       userId: user.id,
       items: lines,
       total,
-      shippingName: body.shippingName || body.shipping?.fullName || user.name,
-      shippingCity: body.shippingCity || body.shipping?.city || "",
-      shipping: body.shipping || user.shipping || {},
+      shippingName: body.shippingName || shipping.fullName || user.name,
+      shippingCity: body.shippingCity || shipping.city || "",
+      shipping,
     });
     await setCart(user.id, []);
     return json(res, { order }, 201);
+  }
+
+  // Cliente actualiza envío de un pedido propio (aún editable)
+  if (req.method === "PATCH") {
+    if (user.role === "admin") {
+      return json(res, { error: "Usa el panel de atelier" }, 403);
+    }
+    const orderId = req.body?.orderId || req.body?.id;
+    const shipping = req.body?.shipping;
+    if (!orderId || !shipping) {
+      return json(res, { error: "orderId y shipping son requeridos" }, 400);
+    }
+    const orders = await listOrders(user.id);
+    const mine = orders.find((o) => o.id === orderId);
+    if (!mine) return json(res, { error: "Pedido no encontrado" }, 404);
+    try {
+      const order = await updateOrderShipping(
+        orderId,
+        shipping,
+        shipping.fullName,
+        shipping.city,
+      );
+      return json(res, { order });
+    } catch (e) {
+      return json(res, { error: e.message }, 400);
+    }
   }
 
   return json(res, { error: "Método no permitido" }, 405);
