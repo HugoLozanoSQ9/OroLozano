@@ -31,12 +31,19 @@ export default function Producto() {
     setBusy(true);
     setMsg("");
     try {
-      if (token && user) {
-        await api.updateCart(product.id, 1);
-      } else {
+      if (token && user && user.role !== "admin") {
+        await api.addToCart(product.id, 1);
+      } else if (!token || !user) {
         const cart = getGuestCart().filter((i) => i.productId !== product.id);
         cart.push({ productId: product.id, quantity: 1 });
         setGuestCart(cart);
+      } else {
+        setMsg("Usa una cuenta de cliente para comprar");
+        setBusy(false);
+        return;
+      }
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new Event("ol-cart-change"));
       }
       setMsg("Añadido al carrito");
     } catch (e) {
@@ -47,7 +54,9 @@ export default function Producto() {
   }
 
   const gallery = product
-    ? [...(product.images || []), product.image].filter(Boolean).filter((v, i, a) => a.indexOf(v) === i)
+    ? [...(product.images || []), product.image]
+        .filter(Boolean)
+        .filter((v, i, a) => a.indexOf(v) === i)
     : [];
 
   return (

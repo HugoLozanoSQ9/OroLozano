@@ -18,7 +18,9 @@ export default async function handler(req, res) {
     const productId = req.body?.productId;
     if (!productId) return json(res, { error: "Producto requerido" }, 400);
     const product = await getProduct(productId);
-    if (!product || product.stock < 1) return json(res, { error: "Pieza no disponible" }, 404);
+    if (!product || product.stock < 1 || product.sold || !product.active) {
+      return json(res, { error: "Pieza no disponible" }, 404);
+    }
     const cart = await getCart(user.id);
     const exists = cart.items.find((i) => i.productId === productId);
     const items = exists
@@ -29,16 +31,31 @@ export default async function handler(req, res) {
   }
 
   if (req.method === "PUT") {
+    if (user.role === "admin") {
+      return json(res, { error: "El admin no compra desde esta cuenta" }, 403);
+    }
     const productId = req.body?.productId;
-    const quantity = req.body?.quantity ?? 0;
+    const quantity = Number(req.body?.quantity ?? 0);
     if (!productId) return json(res, { error: "Producto requerido" }, 400);
     const cart = await getCart(user.id);
-    const items =
-      quantity <= 0
-        ? cart.items.filter((i) => i.productId !== productId)
-        : cart.items.map((i) =>
-            i.productId === productId ? { ...i, quantity: 1 } : i,
-          );
+    let items;
+    if (quantity <= 0) {
+      items = cart.items.filter((i) => i.productId !== productId);
+    } else {
+      const exists = cart.items.find((i) => i.productId === productId);
+      if (exists) {
+        items = cart.items.map((i) =>
+          i.productId === productId ? { ...i, quantity: 1 } : i,
+        );
+      } else {
+        // Si no estaba, añadirlo (mismo efecto que POST)
+        const product = await getProduct(productId);
+        if (!product || product.stock < 1 || product.sold || !product.active) {
+          return json(res, { error: "Pieza no disponible" }, 404);
+        }
+        items = [...cart.items, { productId, quantity: 1 }];
+      }
+    }
     const next = await setCart(user.id, items);
     return json(res, { cart: next });
   }
