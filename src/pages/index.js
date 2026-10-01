@@ -1,6 +1,6 @@
 import Head from "next/head";
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { BrandMark } from "@/components/BrandMark";
 import { PageShell } from "@/components/SiteChrome";
 import { api, formatMxn } from "@/lib/store/client";
@@ -8,49 +8,21 @@ import { api, formatMxn } from "@/lib/store/client";
 export default function Home() {
   const [featured, setFeatured] = useState([]);
   const [loading, setLoading] = useState(true);
-  const trackRef = useRef(null);
-  const [paused, setPaused] = useState(false);
 
   useEffect(() => {
     api
       .products()
       .then((d) => {
         const list = (d.products || []).filter((p) => p.active && !p.sold);
-        // featured primero, luego el resto
         const sorted = [
           ...list.filter((p) => p.featured),
           ...list.filter((p) => !p.featured),
-        ].slice(0, 12);
+        ].slice(0, 8);
         setFeatured(sorted);
       })
       .catch(() => setFeatured([]))
       .finally(() => setLoading(false));
   }, []);
-
-  // Auto-scroll suave del carrusel
-  useEffect(() => {
-    if (!featured.length || paused) return;
-    const el = trackRef.current;
-    if (!el) return;
-    const id = setInterval(() => {
-      if (!el) return;
-      const max = el.scrollWidth - el.clientWidth;
-      if (max <= 0) return;
-      const next = el.scrollLeft + 1;
-      if (next >= max - 2) {
-        el.scrollTo({ left: 0, behavior: "smooth" });
-      } else {
-        el.scrollLeft = next;
-      }
-    }, 30);
-    return () => clearInterval(id);
-  }, [featured, paused]);
-
-  function scrollBy(dir) {
-    const el = trackRef.current;
-    if (!el) return;
-    el.scrollBy({ left: dir * 280, behavior: "smooth" });
-  }
 
   return (
     <>
@@ -93,34 +65,10 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Carrusel de inventario real */}
         <section className="border-t border-border bg-elevated/40 py-14">
           <div className="mx-auto max-w-6xl px-5 md:px-8">
-            <div className="flex flex-wrap items-end justify-between gap-4">
-              <div>
-                <p className="text-xs tracking-[0.28em] uppercase text-gold">Inventario vivo</p>
-                <h2 className="mt-2 font-display text-3xl md:text-4xl">Piezas disponibles</h2>
-              </div>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  aria-label="Anterior"
-                  onClick={() => scrollBy(-1)}
-                  className="flex size-10 items-center justify-center rounded-full border border-border text-gold hover:border-gold"
-                >
-                  ‹
-                </button>
-                <button
-                  type="button"
-                  aria-label="Siguiente"
-                  onClick={() => scrollBy(1)}
-                  className="flex size-10 items-center justify-center rounded-full border border-border text-gold hover:border-gold"
-                >
-                  ›
-                </button>
-              </div>
-            </div>
-
+            <p className="text-xs tracking-[0.28em] uppercase text-gold">Inventario</p>
+            <h2 className="mt-2 font-display text-3xl md:text-4xl">Piezas disponibles</h2>
             {loading ? (
               <p className="mt-10 text-center text-sm text-muted">Cargando piezas…</p>
             ) : featured.length === 0 ? (
@@ -128,41 +76,38 @@ export default function Home() {
                 Por el momento no hay piezas disponibles. Vuelve pronto.
               </p>
             ) : (
-              <div
-                ref={trackRef}
-                onMouseEnter={() => setPaused(true)}
-                onMouseLeave={() => setPaused(false)}
-                className="mt-8 flex gap-4 overflow-x-auto scroll-smooth pb-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-              >
-                {featured.map((p) => (
-                  <Link
-                    key={p.id}
-                    href={`/producto/${p.id}`}
-                    className="group relative w-[220px] shrink-0 overflow-hidden rounded-[var(--radius-xl)] border border-border bg-surface transition hover:border-gold/50"
-                  >
-                    <div className="aspect-square overflow-hidden bg-elevated">
-                      {p.image ? (
-                        <img
-                          src={p.image}
-                          alt={p.name}
-                          className="size-full object-cover transition duration-500 group-hover:scale-105"
-                        />
-                      ) : (
-                        <div className="flex size-full items-center justify-center text-subtle">—</div>
-                      )}
-                    </div>
-                    <div className="p-4">
-                      <p className="text-[10px] tracking-[0.2em] uppercase text-gold">
-                        {p.purity || p.karat || p.metal || "Pieza única"}
-                      </p>
-                      <h3 className="mt-1 font-display text-lg leading-tight">{p.name}</h3>
-                      <p className="mt-2 text-sm tabular-nums text-muted">{formatMxn(p.price)}</p>
-                    </div>
-                  </Link>
-                ))}
+              <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+                {featured.map((p) => {
+                  const cover = p.image || (p.images && p.images[0]) || "";
+                  return (
+                    <Link
+                      key={p.id}
+                      href={`/producto/${p.id}`}
+                      className="group overflow-hidden rounded-[var(--radius-xl)] border border-border bg-surface transition hover:border-gold/50"
+                    >
+                      <div className="aspect-square overflow-hidden bg-elevated">
+                        {cover ? (
+                          <img
+                            src={cover}
+                            alt={p.name}
+                            className="size-full object-cover transition duration-500 group-hover:scale-105"
+                          />
+                        ) : (
+                          <div className="flex size-full items-center justify-center text-subtle">—</div>
+                        )}
+                      </div>
+                      <div className="p-4">
+                        <p className="text-[10px] tracking-[0.2em] uppercase text-gold">
+                          {p.purity || p.karat || p.metal || "Pieza única"}
+                        </p>
+                        <h3 className="mt-1 font-display text-lg leading-tight">{p.name}</h3>
+                        <p className="mt-2 text-sm tabular-nums text-muted">{formatMxn(p.price)}</p>
+                      </div>
+                    </Link>
+                  );
+                })}
               </div>
             )}
-
             <div className="mt-8 text-center">
               <Link href="/tienda" className="text-xs tracking-[0.2em] uppercase text-gold hover:underline">
                 Ver catálogo completo →

@@ -17,6 +17,7 @@ const emptyForm = {
   description: "",
   weightGrams: "",
   image: "",
+  images: [],
   featured: false,
 };
 
@@ -81,6 +82,12 @@ export default function Admin() {
   }
 
   function openEdit(p) {
+    if (p.sold) {
+      showToast("Pieza vendida: no se puede editar hasta liberarla (pedido cancelado)", "error");
+      return;
+    }
+    const imgs = [...(p.images || [])];
+    if (p.image && !imgs.includes(p.image)) imgs.unshift(p.image);
     setForm({
       id: p.id,
       name: p.name || "",
@@ -89,7 +96,8 @@ export default function Admin() {
       purity: (p.purity || p.karat || "18K").toUpperCase().replace(/K$/i, "K"),
       description: p.description || "",
       weightGrams: String(p.weightGrams ?? ""),
-      image: p.image || "",
+      image: imgs[0] || "",
+      images: imgs,
       featured: Boolean(p.featured),
     });
     setModalOpen(true);
@@ -110,8 +118,11 @@ export default function Admin() {
         contentType: file.type || "image/jpeg",
         dataBase64: btoa(binary),
       });
-      setForm((f) => ({ ...f, image: url }));
-      showToast("Imagen subida a Storage");
+      setForm((f) => {
+        const images = [...(f.images || []), url];
+        return { ...f, images, image: images[0] || url };
+      });
+      showToast("Imagen añadida");
     } catch (e) {
       showToast(e.message, "error");
     } finally {
@@ -147,7 +158,8 @@ export default function Admin() {
         description: form.description.slice(0, 500),
         weightGrams: Number(form.weightGrams),
         price,
-        image: form.image,
+        image: (form.images && form.images[0]) || form.image || "",
+        images: form.images && form.images.length ? form.images : form.image ? [form.image] : [],
         featured: form.featured,
         active: true,
         priceBreakdown,
@@ -234,7 +246,7 @@ export default function Admin() {
                     <div
                       key={p.id}
                       className={`rounded-[var(--radius-xl)] border border-border bg-surface p-4 ${
-                        !p.active ? "opacity-50" : ""
+                        p.sold ? "opacity-80" : ""
                       }`}
                     >
                       <div className="relative aspect-square overflow-hidden rounded-[var(--radius-lg)] bg-elevated">
@@ -243,9 +255,9 @@ export default function Admin() {
                         ) : (
                           <div className="flex size-full items-center justify-center text-subtle">Sin imagen</div>
                         )}
-                        {!p.active ? (
-                          <span className="absolute left-2 top-2 rounded-full bg-bg/80 px-2 py-1 text-[10px] uppercase tracking-wide text-muted">
-                            Oculta
+                        {p.sold ? (
+                          <span className="absolute left-2 top-2 rounded-full bg-gold px-2 py-1 text-[10px] uppercase tracking-wide text-bg">
+                            Vendido
                           </span>
                         ) : null}
                       </div>
@@ -274,36 +286,17 @@ export default function Admin() {
                         />
                       </div>
                       <div className="mt-3 flex flex-wrap gap-2">
-                        <button
-                          type="button"
-                          className="h-9 rounded-full border border-border px-3 text-xs"
-                          onClick={() => openEdit(p)}
-                        >
-                          Editar
-                        </button>
-                        {p.active ? (
-                          <button
-                            type="button"
-                            className="h-9 rounded-full border border-danger/40 px-3 text-xs text-danger"
-                            onClick={async () => {
-                              await api.adminUpdateProduct(p.id, { active: false, stock: 0 });
-                              showToast("Pieza ocultada (no eliminada)");
-                              await load();
-                            }}
-                          >
-                            Ocultar
-                          </button>
+                        {p.sold ? (
+                          <span className="inline-flex h-9 items-center rounded-full border border-gold/40 bg-gold/10 px-3 text-xs uppercase tracking-wide text-gold">
+                            Vendido — solo lectura
+                          </span>
                         ) : (
                           <button
                             type="button"
-                            className="h-9 rounded-full border border-gold/40 px-3 text-xs text-gold"
-                            onClick={async () => {
-                              await api.adminUpdateProduct(p.id, { active: true, stock: 1 });
-                              showToast("Pieza visible de nuevo");
-                              await load();
-                            }}
+                            className="h-9 rounded-full border border-border px-3 text-xs"
+                            onClick={() => openEdit(p)}
                           >
-                            Restaurar
+                            Editar
                           </button>
                         )}
                       </div>
@@ -339,7 +332,7 @@ export default function Admin() {
                                 onClick={async () => {
                                   try {
                                     const res = await api.adminReleaseOrderProducts(o.id);
-                                    showToast(res.message || "Piezas liberadas");
+                                    showToast(res.message || "Piezas liberadas: ya puedes editarlas en Piezas");
                                     await load();
                                   } catch (err) {
                                     showToast(err.message, "error");
@@ -457,15 +450,34 @@ export default function Admin() {
                       onChange={(e) => setForm({ ...form, description: e.target.value })}
                     />
 
-                    {/* Upload interactivo */}
-                    <div className="rounded-[var(--radius-lg)] border border-dashed border-border bg-elevated p-4 text-center">
-                      {form.image ? (
-                        <img src={form.image} alt="" className="mx-auto mb-3 h-28 rounded-md object-cover" />
+                    {/* Multi-imagen */}
+                    <div className="rounded-[var(--radius-lg)] border border-dashed border-border bg-elevated p-4">
+                      <p className="mb-2 text-xs uppercase tracking-wide text-subtle">Fotos de la pieza (varias)</p>
+                      {(form.images || []).length ? (
+                        <div className="mb-3 flex flex-wrap gap-2">
+                          {(form.images || []).map((src, i) => (
+                            <div key={i} className="relative">
+                              <img src={src} alt="" className="h-20 w-20 rounded-md object-cover" />
+                              <button
+                                type="button"
+                                className="absolute -right-1 -top-1 flex size-5 items-center justify-center rounded-full bg-danger text-[10px] text-white"
+                                onClick={() =>
+                                  setForm((f) => {
+                                    const images = (f.images || []).filter((_, j) => j !== i);
+                                    return { ...f, images, image: images[0] || "" };
+                                  })
+                                }
+                              >
+                                ×
+                              </button>
+                            </div>
+                          ))}
+                        </div>
                       ) : (
-                        <p className="mb-3 text-sm text-muted">Sin imagen</p>
+                        <p className="mb-3 text-sm text-muted">Sin imágenes</p>
                       )}
                       <label className="inline-flex cursor-pointer items-center justify-center rounded-full bg-gold px-5 py-2 text-xs tracking-[0.16em] uppercase text-bg">
-                        {uploading ? "Subiendo…" : "Seleccionar archivo"}
+                        {uploading ? "Subiendo…" : "+ Añadir foto"}
                         <input
                           type="file"
                           accept="image/*"
@@ -474,7 +486,7 @@ export default function Admin() {
                           onChange={(e) => uploadFile(e.target.files?.[0])}
                         />
                       </label>
-                      <p className="mt-2 text-[11px] text-subtle">Se sube al bucket Supabase · products</p>
+                      <p className="mt-2 text-[11px] text-subtle">Cada foto se sube al bucket · puedes agregar varias</p>
                     </div>
 
                     {pricePreview ? (
